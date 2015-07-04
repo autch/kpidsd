@@ -1,0 +1,128 @@
+kpidop.kpi
+==========
+
+DSD (Direct Stream Digital) 音源を DSD over PCM (DoP) 方式で再生するため
+のKbMedia Player プラグインです。対応する拡張子は dsf, dff, wsd です。
+
+KbMedia Player 2.51beta14 が必要です。これ以降のバージョンでは動作しませ
+ん。ASIO/WASAPI サポートが必要なためこれ以前のバージョンでもおそらく動作
+しません。
+
+KbMedia Player のプラグイン仕様は PCM を前提として作られているため、DSD
+を再生する上で制限事項がありますので、このファイルは最後まで目を通してく
+ださい。
+
+
+KbMedia Player の構成
+---------------------
+
+
+
+対応ファイルフォーマット
+------------------------
+
+以下のファイルフォーマットとバージョンに対応します。
+
+・ソニー DSF v1.01
+・フィリップス DSDIFF v1.5
+・1bit オーディオコンソーシアム WSD v1.1
+
+DSDIFF フォーマットにおける DST (Direct Stream Transfer) コーデックは 
+XXX です。
+
+KORG AudioGate v3.0.2 で生成した DSF/DSDIFF/WSD での動作を確認しています。
+e-onkyo music で購入した DSF ファイルで動作を確認しています。
+1bit オーディオコンソーシアム公式サイトの WSD ファイルで確認しています。
+
+
+対応DSD DAC
+-----------
+
+DoP Version 1.0 以降をサポートする DSD DAC で動作します。本プラグインの
+実装は Version 1.1 の仕様に従っています。
+
+5.6MHz 以上のサンプルレートには PCM サンプルレートを上げる方法で対応しま
+す。マーカ 0x06/0xf9 を使う方式には対応していません（デバイスを調べる方
+法がないので）。
+
+ステレオ以上のチャンネル数には DAC が対応している必要がありますが、
+KbMedia Player の構造上チャンネル構成を伝える方法が無いため、データの想
+定通りのチャンネル配置では鳴らないことがあります。
+
+Roland UA-M10 と FOSTEX HP-A4 (thanks KOH) で確認しています。
+
+
+対応OS
+------
+
+64bit ファイル API を使用するため、Windows 2000 以降が必要です。リンカー
+の設定上は Windows XP 以降に対応すると設定してビルドしていますが、
+Windows 7 / 8.1 / 10 Preview 以外では確認していません。
+
+
+シークについて
+--------------
+
+DSD DAC の機種によってはシーク時にプチノイズが乗ることがあります。
+KbMedia Player はシーク中にデータが途切れる（PCM としては正しいが、DoP 
+としては無音データを流すべき）ため、これを回避する手段はありません。
+
+
+タグ情報について
+----------------
+
+DSF の ID3v2 タグには libid3tag ライブラリで対応します。ID3v2 のフレーム
+と KbMedia Player タグ情報との対応は以下のとおりです。
+
+TIT2 => タイトル
+TPE1 => アーティスト
+TALB => アルバム
+TCON => ジャンル
+TDRC => 年
+TSSE => コメント
+TRCK => トラック番号
+
+「コメント」には対応するフレームを入れていません。
+
+DSDIFF では、Edited Master Information チャンクにある DITI と DIAR チャ
+ンクが、それぞれタイトルとアーティストに対応します。
+
+WSD では、タイトル、アーティスト、アルバム、ジャンル、コメント、日時に対
+応します。
+
+
+ライセンス
+----------
+
+kpidop.kpi - DSD over PCM plugin for KbMedia Player
+ Copyright (c) 2015, Autch.net.
+
+libid3tag - ID3 tag manipulation library
+ Copyright (C) 2000-2004 Underbit Technologies, Inc.
+
+zlib - ZLIB DATA COMPRESSION LIBRARY
+ Copyright (C) 1995-2010 Jean-loup Gailly and Mark Adler
+
+kpidop.kpi は libid3tag ライブラリをリンクしています。libid3tag ライブラ
+リはGPL v2 ライセンスです。ライセンスについては添付の 
+COPYRIGHT.libid3tag と COPYING.libid3tag をご覧ください。
+
+libid3tag ライブラリは以下のアドレスで入手できます。
+http://sourceforge.net/projects/mad/files/libid3tag/
+
+libid3tag ライブラリは zlib ライブラリの Windows DLL 版バイナリをリンク
+しています。zlib ライブラリのライセンスについては LICENSE.zlib をご覧く
+ださい。
+
+zlib ライブラリは以下のアドレスで入手できます。
+http://www.zlib.net/
+
+kpidop.kpi 自体は MIT ライセンスで配布されます。COPYING ファイルをご覧く
+ださい。
+
+
+----
+Autch
+autch@autch.net
+http://github.com/autch
+http://www.autch.net/

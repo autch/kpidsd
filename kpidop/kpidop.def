@@ -1,0 +1,5 @@
+LIBRARY	kpidop.kpi
+
+EXPORTS
+	kmp_GetTestModule
+	kmp_GetTestTagInfo
