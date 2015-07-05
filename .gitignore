@@ -230,5 +230,5 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-libid3tag-0.15.1b/
-zlib128-dll/
+taglib-master/
+taglib/

@@ -126,18 +126,16 @@ KbMedia Player はシーク中にデータが途切れる（PCM としては正しいが、DoP
 タグ情報について
 ----------------
 
-DSF の ID3v2 タグには libid3tag ライブラリで対応します。ID3v2 のフレーム
-と KbMedia Player タグ情報との対応は以下のとおりです。
+DSF の ID3v2 タグには taglib ライブラリで対応します。ID3v2 のフレームと 
+KbMedia Player タグ情報との対応は以下のとおりです。
 
 TIT2 => タイトル
 TPE1 => アーティスト
 TALB => アルバム
 TCON => ジャンル
 TDRC => 年
-TSSE => コメント
+COMM => コメント
 TRCK => トラック番号
-
-「コメント」には対応するフレームを入れていません。
 
 DSDIFF では、Edited Master Information チャンクにある DITI と DIAR チャ
 ンクが、それぞれタイトルとアーティストに対応します。
@@ -152,25 +150,18 @@ WSD では、タイトル、アーティスト、アルバム、ジャンル、コメント、日時に対
 kpidop.kpi - DSD over PCM plugin for KbMedia Player
  Copyright (c) 2015, Autch.net.
 
-libid3tag - ID3 tag manipulation library
- Copyright (C) 2000-2004 Underbit Technologies, Inc.
+taglib Audio Meta-Data Library
+ Copyright (C) 2002 - 2008 by Scott Wheeler, et al.
 
-zlib - ZLIB DATA COMPRESSION LIBRARY
- Copyright (C) 1995-2010 Jean-loup Gailly and Mark Adler
+kpidop.kpi は ID3v2 タグ対応のためにtaglib ライブラリをリンクしています
+（zlib は含んでいません）。taglib ライブラリは LGPL 2.1 と MPL 1.1 のデ
+ュアルライセンスです。
 
-kpidop.kpi は libid3tag ライブラリをリンクしています。libid3tag ライブラ
-リは GPL v2 ライセンスです。ライセンスについては添付の 
-COPYRIGHT.libid3tag と COPYING.libid3tag をご覧ください。
+LGPL: http://www.gnu.org/licenses/lgpl.html
+MPL: http://www.mozilla.org/MPL/MPL-1.1.html
 
-libid3tag ライブラリは以下のアドレスで入手できます。
-http://sourceforge.net/projects/mad/files/libid3tag/
-
-libid3tag ライブラリは zlib ライブラリの Windows DLL 版バイナリをリンク
-しています。zlib ライブラリのライセンスについては LICENSE.zlib をご覧く
-ださい。
-
-zlib ライブラリは以下のアドレスで入手できます。
-http://www.zlib.net/
+taglib ライブラリは以下のアドレスで入手できます。
+http://taglib.github.io/
 
 kpidop.kpi 自体は MIT ライセンスで配布されます。COPYING ファイルをご覧く
 ださい。

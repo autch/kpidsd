@@ -230,10 +230,10 @@ success:
 	return d - buffer;
 }
 
-#include "id3tag.h"
+#include "id3v2tag.h"
+#include "DSFFile.h"
 #include <stdlib.h>
 
-BOOL SetID3TagAsKMPTag(struct id3_tag* tag, const char* frame_id, IKmpTagInfo* pInfo, const char* kmpTagID);
 
 BOOL CDSFDecoderKpi::GetTagInfo(const char *cszFileName, IKmpTagInfo *pInfo)
 {
@@ -242,8 +242,10 @@ BOOL CDSFDecoderKpi::GetTagInfo(const char *cszFileName, IKmpTagInfo *pInfo)
 	if (!file.Open(cszFileName))
 		return FALSE;
 	
-	if (file.Header()->id3v2_pointer == 0)
-		goto fail_cleanup;
+	if (file.Header()->id3v2_pointer == 0) {
+		file.Close();
+		return TRUE;
+	}
 
 	if (!file.Seek(file.Header()->id3v2_pointer, NULL, FILE_BEGIN))
 		goto fail_cleanup;
@@ -258,62 +260,41 @@ BOOL CDSFDecoderKpi::GetTagInfo(const char *cszFileName, IKmpTagInfo *pInfo)
 		delete[] buf;
 		goto fail_cleanup;
 	}
-
-	struct id3_tag* tag = id3_tag_parse(buf, dwTagSize);
-	if (tag == NULL) {
-		delete[] buf;
-		goto fail_cleanup;
-	}
-
-	SetID3TagAsKMPTag(tag, "TIT2", pInfo, SZ_KMP_TAGINFO_NAME_TITLE);
-	SetID3TagAsKMPTag(tag, "TPE1", pInfo, SZ_KMP_TAGINFO_NAME_ARTIST);
-	SetID3TagAsKMPTag(tag, "TALB", pInfo, SZ_KMP_TAGINFO_NAME_ALBUM);
-	SetID3TagAsKMPTag(tag, "TCON", pInfo, SZ_KMP_TAGINFO_NAME_GENRE);
-	SetID3TagAsKMPTag(tag, "TDRC", pInfo, SZ_KMP_TAGINFO_NAME_DATE);
-	//SetID3TagAsKMPTag(tag, "COMM", pInfo, SZ_KMP_TAGINFO_NAME_COMMENT);
-	SetID3TagAsKMPTag(tag, "TSSE", pInfo, SZ_KMP_TAGINFO_NAME_COMMENT);
-	SetID3TagAsKMPTag(tag, "TRCK", pInfo, SZ_KMP_TAGINFO_NAME_TRACKNUMBER);
-
-	id3_tag_delete(tag);
 	delete[] buf;
+
+	// file はフォーマットチェックとしてしか使わない
+
+	{
+		// TagLib::DSFFile は CDSFFile でフォーマットチェックが済んでいる前提で手抜き実装
+		TagLib::FileName filename(cszFileName);
+		TagLib::DSFFile tfile(filename);
+		TagLib::ID3v2::Tag* tag;
+
+		tag = reinterpret_cast<TagLib::ID3v2::Tag*>(tfile.tag());
+		if (tag != NULL) {
+			pInfo->SetValueW(SZ_KMP_TAGINFO_NAME_TITLE, tag->title().toCWString());
+			pInfo->SetValueW(SZ_KMP_TAGINFO_NAME_ARTIST, tag->artist().toCWString());
+			pInfo->SetValueW(SZ_KMP_TAGINFO_NAME_ALBUM, tag->album().toCWString());
+			pInfo->SetValueW(SZ_KMP_TAGINFO_NAME_GENRE, tag->genre().toCWString());
+			pInfo->SetValueW(SZ_KMP_TAGINFO_NAME_COMMENT, tag->comment().toCWString());
+
+			{
+				char str[16];	// log10(2^32) < 11
+
+				_snprintf_s(str, sizeof str, "%d", tag->year());
+				pInfo->SetValueA(SZ_KMP_TAGINFO_NAME_DATE, str);
+
+				_snprintf_s(str, sizeof str, "%d", tag->track());
+				pInfo->SetValueA(SZ_KMP_TAGINFO_NAME_TRACKNUMBER, str);
+			}
+		}
+
+	}
 
 	file.Close();
 	return TRUE;
 
 fail_cleanup:
 	file.Close();
-	return FALSE;
-}
-
-BOOL SetID3TagAsKMPTag(struct id3_tag* tag, const char* frame_id, IKmpTagInfo* pInfo, const char* kmpTagID)
-{
-	struct id3_frame* frame;
-
-	frame = id3_tag_findframe(tag, frame_id, 0);
-	if (frame != NULL) {
-		id3_utf8_t* utf8 = NULL;
-
-		switch (frame->fields[1].type) {
-		case ID3_FIELD_TYPE_STRING:
-			utf8 = id3_ucs4_utf8duplicate(id3_field_getstring(&frame->fields[1]));
-			break;
-		case ID3_FIELD_TYPE_STRINGLIST:
-		{
-			int nStr = id3_field_getnstrings(&frame->fields[1]);
-			if (nStr > 0) {
-				utf8 = id3_ucs4_utf8duplicate(id3_field_getstrings(&frame->fields[1], 0));
-			}
-			break;
-		}
-		case ID3_FIELD_TYPE_STRINGFULL:
-			utf8 = id3_ucs4_utf8duplicate(id3_field_getfullstring(&frame->fields[1]));
-			break;
-		}
-		if (utf8 != NULL) {
-			pInfo->SetValueU8(kmpTagID, (const char*)utf8);
-			free(utf8);
-			return TRUE;
-		}
-	}
 	return FALSE;
 }

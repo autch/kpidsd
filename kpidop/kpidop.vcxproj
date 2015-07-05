@@ -44,19 +44,21 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <TargetExt>.kpi</TargetExt>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)include;$(SolutionDir)libdsd\include;$(SolutionDir)libid3tag-0.15.1b</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)include;$(SolutionDir)libdsd\include;$(SolutionDir)taglib\include\taglib</IncludePath>
+    <LibraryPath>$(SolutionDir)taglib\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.kpi</TargetExt>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)include;$(SolutionDir)libdsd\include;$(SolutionDir)libid3tag-0.15.1b</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)include;$(SolutionDir)libdsd\include;$(SolutionDir)taglib\include\taglib</IncludePath>
+    <LibraryPath>$(SolutionDir)taglib\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;KPIDOP_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;TAGLIB_STATIC;_DEBUG;_WINDOWS;_USRDLL;KPIDOP_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -65,7 +67,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>kpidop.def</ModuleDefinitionFile>
-      <AdditionalDependencies>$(SolutionDir)\$(Configuration)\libdsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\$(Configuration)\libdsd.lib;tag.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
       <Command>
@@ -87,7 +89,7 @@ copy /y $(ProjectDir)kpidop.txt $(KMPPluginsPath)
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;KPIDOP_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;TAGLIB_STATIC;NDEBUG;_WINDOWS;_USRDLL;KPIDOP_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -98,7 +100,7 @@ copy /y $(ProjectDir)kpidop.txt $(KMPPluginsPath)
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <ModuleDefinitionFile>kpidop.def</ModuleDefinitionFile>
-      <AdditionalDependencies>$(SolutionDir)\$(Configuration)\libdsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)\$(Configuration)\libdsd.lib;tag.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
       <Command>
@@ -117,6 +119,7 @@ copy /y $(ProjectDir)kpidop.txt $(KMPPluginsPath)
     <ClInclude Include="include\CWSDDecoderKpi.h" />
     <ClInclude Include="include\dop.h" />
     <ClInclude Include="include\DSDDecoderFactory.h" />
+    <ClInclude Include="include\DSFFile.h" />
     <ClInclude Include="include\kmp_pi.h" />
     <ClInclude Include="include\kpi.h" />
     <ClInclude Include="include\kpi_version.h" />
@@ -133,6 +136,7 @@ copy /y $(ProjectDir)kpidop.txt $(KMPPluginsPath)
     <ClCompile Include="src\dllexports.cpp" />
     <ClCompile Include="src\dllmain.cpp" />
     <ClCompile Include="src\DSDDecoderFactory.cpp" />
+    <ClCompile Include="src\DSFFile.cpp" />
     <ClCompile Include="src\kpi.cpp" />
     <ClCompile Include="src\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -142,9 +146,6 @@ copy /y $(ProjectDir)kpidop.txt $(KMPPluginsPath)
   <ItemGroup>
     <ProjectReference Include="..\libdsd\libdsd.vcxproj">
       <Project>{df7139be-dea3-4031-8f77-8b7be0e3801a}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\libid3tag-0.15.1b\msvc++\libid3tag.vcxproj">
-      <Project>{051a79a8-282b-43e6-b9fc-04c02b4d1149}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
