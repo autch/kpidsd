@@ -63,7 +63,7 @@ BOOL CWSDDecoderKpi::Open(LPSTR szFileName, SOUNDINFO* pInfo)
 	}
 
 	{
-		uint64_t dataBytes = file.FileSize() - file.Header()->dataOffset;
+		uint64_t dataBytes = file.FileSize().QuadPart - file.Header()->dataOffset;
 		uint64_t samples = dataBytes;
 		
 		samples <<= 3;

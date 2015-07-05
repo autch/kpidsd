@@ -1,28 +1,24 @@
 #include "stdafx.h"
 #include "CDSFFile.h"
 
-CDSFFile::CDSFFile() : hFile(INVALID_HANDLE_VALUE)
+CDSFFile::CDSFFile() : CLargeFile()
 {
 	liDataOffset.QuadPart = 0;
 }
 
 CDSFFile::~CDSFFile()
 {
-	Close();
+	CLargeFile::~CLargeFile();
 }
 
 void CDSFFile::Close()
 {
-	if (hFile != INVALID_HANDLE_VALUE) {
-		::CloseHandle(hFile);
-		hFile = INVALID_HANDLE_VALUE;
-	}
+	CLargeFile::Close();
 }
 
 BOOL CDSFFile::Open(LPCSTR szFileName)
 {
-	hFile = ::CreateFile(szFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (hFile == INVALID_HANDLE_VALUE)
+	if (!CLargeFile::Open(szFileName))
 		return FALSE;
 
 	if (!checkHeader()) {
@@ -52,8 +48,6 @@ BOOL CDSFFile::checkHeader()
 			return FALSE;
 		if (header.size != DSF_HEADER_SIZE)
 			return FALSE;
-
-		::GetFileSizeEx(hFile, &liFileSize);
 		if (header.file_size != liFileSize.QuadPart)
 			return FALSE;
 	}

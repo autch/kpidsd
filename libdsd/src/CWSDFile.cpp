@@ -1,28 +1,24 @@
 #include "stdafx.h"
 #include "CWSDFile.h"
 
-CWSDFile::CWSDFile() : hFile(INVALID_HANDLE_VALUE)
+CWSDFile::CWSDFile() : CLargeFile()
 {
 
 }
 
 CWSDFile::~CWSDFile()
 {
-	Close();
+	CLargeFile::~CLargeFile();
 }
 
 void CWSDFile::Close()
 {
-	if (hFile != INVALID_HANDLE_VALUE) {
-		::CloseHandle(hFile);
-		hFile = INVALID_HANDLE_VALUE;
-	}
+	CLargeFile::Close();
 }
 
 BOOL CWSDFile::Open(LPCSTR szFileName)
 {
-	hFile = ::CreateFile(szFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (hFile == INVALID_HANDLE_VALUE)
+	if (!CLargeFile::Open(szFileName))
 		return FALSE;
 
 	if (!checkHeader()) {
@@ -60,8 +56,6 @@ BOOL CWSDFile::checkHeader()
 	header.fileSize = ntohllX(header.fileSize);
 	header.textOffset = ntohl(header.textOffset);
 	header.dataOffset = ntohl(header.dataOffset);
-
-	::GetFileSizeEx(hFile, &liFileSize);
 
 	if (header.textOffset > liFileSize.QuadPart 
 		|| header.textOffset < sizeof header + sizeof data_spec)
