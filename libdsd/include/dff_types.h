@@ -85,51 +85,74 @@ typedef uint32_t DFFID;
 
 struct DFFChunk
 {
-	DFFID		ckID;
-	uint64_t	ckDataSize;
+	struct {
+		DFFID		ckID;
+		uint64_t	ckDataSize;
+	} header;
 
 	uint64_t	offsetToData;
 };
 
 struct FVERChunk : public DFFChunk
 {
-	uint32_t	version;
+	struct
+	{
+		uint32_t	version;
+	} data;
 };
 
 struct FSChunk : public DFFChunk
 {
-	uint32_t	sampleRate;
+	struct
+	{
+		uint32_t	sampleRate;
+	} data;
 };
 
 struct CHNLChunk : public DFFChunk
 {
-	uint16_t	numChannels;
+	struct
+	{
+		uint16_t	numChannels;
+	} data;
 	std::vector<DFFID> chID;
 };
 
 struct CMPRChunk : public DFFChunk
 {
-	DFFID		compressionType;
-	uint8_t		count;
+	struct
+	{
+		DFFID		compressionType;
+		uint8_t		count;
+	} data;
 	std::string	compressionName;
 };
 
 struct ABSSChunk : public DFFChunk
 {
-	uint16_t	hours;
-	uint8_t		minutes;
-	uint8_t		seconds;
-	uint32_t	samples;
+	struct
+	{
+		uint16_t	hours;
+		uint8_t		minutes;
+		uint8_t		seconds;
+		uint32_t	samples;
+	} data;
 };
 
 struct LSCOChunk : public DFFChunk
 {
-	uint16_t	lsConfig;
+	struct
+	{
+		uint16_t	lsConfig;
+	} data;
 };
 
 struct PROPChunk : public DFFChunk
 {
-	DFFID		propType;
+	struct
+	{
+		DFFID		propType;
+	} data;
 
 	FSChunk		fs;
 	CHNLChunk	chnl;
@@ -145,8 +168,11 @@ struct DSDChunk : public DFFChunk
 
 struct FRTEChunk : public DFFChunk
 {
-	uint32_t	numFrames;
-	uint16_t	frameRate;
+	struct
+	{
+		uint32_t	numFrames;
+		uint16_t	frameRate;
+	} data;
 };
 
 struct DSTFChunk : public DFFChunk
@@ -156,11 +182,18 @@ struct DSTFChunk : public DFFChunk
 
 struct DSTCChunk : public DFFChunk
 {
-	uint32_t	crc;
+	struct
+	{
+		uint32_t	crc;
+	} data;
 };
 
 struct DSTChunk : public DFFChunk
 {
+	struct 
+	{
+	} data;
+
 	FRTEChunk	frte;
 	DSTFChunk	dstf;
 	DSTCChunk	dstc;
@@ -171,69 +204,101 @@ struct DSTFrameIndex;
 
 struct DSTIChunk : public DFFChunk
 {
+	struct
+	{
+	} data;
+
 	std::vector<DSTFrameIndex> indexData;
 };
 
 struct DSTFrameIndex
 {
-	uint64_t	offset;
-	uint32_t	length;
+	struct
+	{
+		uint64_t	offset;
+		uint32_t	length;
+	} data;
 };
 
 struct Comment;
 
 struct COMTChunk : public DFFChunk
 {
-	uint16_t	numComments;
+	struct
+	{
+		uint16_t	numComments;
+	} data;
 	std::vector<Comment> comments;
 };
 
 struct Comment
 {
-	uint16_t	timeStampYear;
-	uint8_t		timeStampMonth;
-	uint8_t		timeStampDay;
-	uint8_t		timeStampHour;
-	uint8_t		timeStampMinutes;
-	uint16_t	cmtType;
-	uint16_t	cmtRef;
-	uint32_t	count;
+	struct
+	{
+		uint16_t	timeStampYear;
+		uint8_t		timeStampMonth;
+		uint8_t		timeStampDay;
+		uint8_t		timeStampHour;
+		uint8_t		timeStampMinutes;
+		uint16_t	cmtType;
+		uint16_t	cmtRef;
+		uint32_t	count;
+	} data;
 	std::string commentText;
 };
 
 struct EMIDChunk : public DFFChunk
 {
+	struct
+	{
+	} data;
 	std::string	emid;
 };
 
 struct MARKChunk : public DFFChunk
 {
-	uint16_t	hours;
-	uint8_t		minutes;
-	uint8_t		seconds;
-	uint32_t	samples;
-	int32_t		offset;
-	uint16_t	markType;
-	uint16_t	markChannel;
-	uint16_t	trackFlags;
-	uint32_t	count;
+	struct
+	{
+		uint16_t	hours;
+		uint8_t		minutes;
+		uint8_t		seconds;
+		uint32_t	samples;
+		int32_t		offset;
+		uint16_t	markType;
+		uint16_t	markChannel;
+		uint16_t	trackFlags;
+		uint32_t	count;
+	} data;
+
 	std::string	markerText;
 };
 
 struct DIARChunk : public DFFChunk
 {
-	uint32_t	count;
+	struct
+	{
+		uint32_t	count;
+	} data;
+
 	std::string	artistText;
 };
 
 struct DITIChunk : public DFFChunk
 {
-	uint32_t	count;
+	struct
+	{
+		uint32_t	count;
+	} data;
+
 	std::string	titleText;
 };
 
 struct DIINChunk : public DFFChunk
 {
+	struct
+	{
+	} data;
+
 	EMIDChunk	emid;
 	MARKChunk	mark;
 	DIARChunk	diar;
@@ -242,12 +307,18 @@ struct DIINChunk : public DFFChunk
 
 struct MANFChunk : public DFFChunk
 {
-	DFFID		manID;
+	struct
+	{
+		DFFID		manID;
+	} data;
 };
 
 struct FRM8Chunk : public DFFChunk
 {
-	DFFID		formType;
+	struct
+	{
+		DFFID		formType;
+	} data;
 
 	FVERChunk	fver;
 	PROPChunk	prop;
