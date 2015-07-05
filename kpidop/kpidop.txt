@@ -153,7 +153,7 @@ kpidop.kpi - DSD over PCM plugin for KbMedia Player
 taglib Audio Meta-Data Library
  Copyright (C) 2002 - 2008 by Scott Wheeler, et al.
 
-kpidop.kpi は ID3v2 タグ対応のためにtaglib ライブラリをリンクしています
+kpidop.kpi は ID3v2 タグ対応のために taglib ライブラリをリンクしています
 （zlib は含んでいません）。taglib ライブラリは LGPL 2.1 と MPL 1.1 のデ
 ュアルライセンスです。
 

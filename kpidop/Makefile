@@ -1,8 +1,8 @@
 
 ZIPNAME=kpidop_$(shell date +%Y%m%d%H%M).zip
 
-FILES=../Release/kpidop.kpi ../zlib128-dll/zlib1.dll \
-	COPYING COPYING.libid3tag COPYRIGHT.libid3tag LICENSE.zlib \
+FILES=../Release/kpidop.kpi \
+	COPYING \
 	kpidop.txt
 
 zip:
