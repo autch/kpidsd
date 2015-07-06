@@ -115,6 +115,7 @@ copy /y $(ProjectDir)kpidop.txt $(KMPPluginsPath)
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\CAbstractKpi.h" />
+    <ClInclude Include="include\CDFFDecoderKpi.h" />
     <ClInclude Include="include\CDSFDecoderKpi.h" />
     <ClInclude Include="include\CWSDDecoderKpi.h" />
     <ClInclude Include="include\dop.h" />
@@ -131,6 +132,7 @@ copy /y $(ProjectDir)kpidop.txt $(KMPPluginsPath)
     <None Include="kpidop.def" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\CDFFDecoderKpi.cpp" />
     <ClCompile Include="src\CDSFDecoderKpi.cpp" />
     <ClCompile Include="src\CWSDDecoderKpi.cpp" />
     <ClCompile Include="src\dllexports.cpp" />

@@ -3,6 +3,12 @@
 
 #pragma pack(push, 1)
 
+#include <stdint.h>
+#include <vector>
+
+#define DSD_FREQ_64FS	( 2822400)		// = 44100 * 64
+#define DSD_FREQ_128FS	( 5644800)		// = 44100 * 128
+
 typedef uint32_t DFFID;
 
 #define MAKE_DFFID(a, b, c, d)		(((((((a) << 8) | (b)) << 8) | (c)) << 8) | (d))
@@ -83,14 +89,81 @@ typedef uint32_t DFFID;
 #define DFFID_DITI					(MAKE_DFFID('D', 'I', 'T', 'I'))
 #define DFFID_MANF					(MAKE_DFFID('M', 'A', 'N', 'F'))
 
+namespace
+{
+	uint64_t ntohllX(uint64_t be)
+	{
+		uint8_t* p = (uint8_t*)&be;
+		uint64_t r = p[4];
+
+		r = (r << 8) | p[5];
+		r = (r << 8) | p[6];
+		r = (r << 8) | p[7];
+		r = (r << 8) | p[0];
+		r = (r << 8) | p[1];
+		r = (r << 8) | p[2];
+		r = (r << 8) | p[3];
+
+		return r;
+	}
+
+	uint64_t ntohll(uint64_t be)
+	{
+		uint8_t* p = (uint8_t*)&be;
+		uint64_t r = p[0];
+
+		r = (r << 8) | p[1];
+		r = (r << 8) | p[2];
+		r = (r << 8) | p[3];
+		r = (r << 8) | p[4];
+		r = (r << 8) | p[5];
+		r = (r << 8) | p[6];
+		r = (r << 8) | p[7];
+
+		return r;
+	}
+
+	uint32_t ntohl(uint32_t be)
+	{
+		uint8_t* p = (uint8_t*)&be;
+		uint32_t r = p[0];
+
+		r = (r << 8) | p[1];
+		r = (r << 8) | p[2];
+		r = (r << 8) | p[3];
+
+		return r;
+	}
+
+	uint16_t ntohs(uint16_t be)
+	{
+		uint8_t* p = (uint8_t*)&be;
+		return (p[0] << 8) | p[1];
+	}
+
+}
+
+struct DFFChunkHeader
+{
+	DFFID		ckID;
+	uint64_t	ckDataSize;
+};
+
 struct DFFChunk
 {
-	struct {
-		DFFID		ckID;
-		uint64_t	ckDataSize;
-	} header;
+	DFFChunkHeader	header;
+	uint64_t		offsetToData;
 
-	uint64_t	offsetToData;
+	void setupHeader()
+	{
+		header.ckID = ntohl(header.ckID);
+		header.ckDataSize = ntohll(header.ckDataSize);
+	}
+
+	virtual void setupData() {}
+	uint64_t OffsetToData() const { return offsetToData; }
+	DFFID ID() const { return header.ckID; }
+	uint64_t DataSize() const { return header.ckDataSize; }
 };
 
 struct FVERChunk : public DFFChunk
@@ -99,6 +172,11 @@ struct FVERChunk : public DFFChunk
 	{
 		uint32_t	version;
 	} data;
+
+	void setupData()
+	{
+		data.version = ntohl(data.version);
+	}
 };
 
 struct FSChunk : public DFFChunk
@@ -107,6 +185,11 @@ struct FSChunk : public DFFChunk
 	{
 		uint32_t	sampleRate;
 	} data;
+
+	void setupData()
+	{
+		data.sampleRate = ntohl(data.sampleRate);
+	}
 };
 
 struct CHNLChunk : public DFFChunk
@@ -115,7 +198,13 @@ struct CHNLChunk : public DFFChunk
 	{
 		uint16_t	numChannels;
 	} data;
+
 	std::vector<DFFID> chID;
+
+	void setupData()
+	{
+		data.numChannels = ntohs(data.numChannels);
+	}
 };
 
 struct CMPRChunk : public DFFChunk
@@ -125,7 +214,13 @@ struct CMPRChunk : public DFFChunk
 		DFFID		compressionType;
 		uint8_t		count;
 	} data;
+
 	std::string	compressionName;
+
+	void setupData()
+	{
+		data.compressionType = ntohl(data.compressionType);
+	}
 };
 
 struct ABSSChunk : public DFFChunk
@@ -137,6 +232,12 @@ struct ABSSChunk : public DFFChunk
 		uint8_t		seconds;
 		uint32_t	samples;
 	} data;
+
+	void setupData()
+	{
+		data.hours = ntohs(data.hours);
+		data.samples = ntohl(data.samples);
+	}
 };
 
 struct LSCOChunk : public DFFChunk
@@ -145,6 +246,11 @@ struct LSCOChunk : public DFFChunk
 	{
 		uint16_t	lsConfig;
 	} data;
+
+	void setupData()
+	{
+		data.lsConfig = ntohs(data.lsConfig);
+	}
 };
 
 struct PROPChunk : public DFFChunk
@@ -159,6 +265,11 @@ struct PROPChunk : public DFFChunk
 	CMPRChunk	cmpr;
 	ABSSChunk	abss;
 	LSCOChunk	lsco;
+
+	void setupData()
+	{
+		data.propType = ntohl(data.propType);
+	}
 };
 
 struct DSDChunk : public DFFChunk
@@ -173,6 +284,12 @@ struct FRTEChunk : public DFFChunk
 		uint32_t	numFrames;
 		uint16_t	frameRate;
 	} data;
+
+	void setupData()
+	{
+		data.numFrames = ntohl(data.numFrames);
+		data.frameRate = ntohs(data.frameRate);
+	}
 };
 
 struct DSTFChunk : public DFFChunk
@@ -186,6 +303,11 @@ struct DSTCChunk : public DFFChunk
 	{
 		uint32_t	crc;
 	} data;
+
+	void setupData()
+	{
+		data.crc = ntohl(data.crc);
+	}
 };
 
 struct DSTChunk : public DFFChunk
@@ -218,6 +340,12 @@ struct DSTFrameIndex
 		uint64_t	offset;
 		uint32_t	length;
 	} data;
+
+	void setupData()
+	{
+		data.offset = ntohll(data.offset);
+		data.length = ntohl(data.length);
+	}
 };
 
 struct Comment;
@@ -228,7 +356,13 @@ struct COMTChunk : public DFFChunk
 	{
 		uint16_t	numComments;
 	} data;
+
 	std::vector<Comment> comments;
+
+	void setupData()
+	{
+		data.numComments = ntohl(data.numComments);
+	}
 };
 
 struct Comment
@@ -244,7 +378,16 @@ struct Comment
 		uint16_t	cmtRef;
 		uint32_t	count;
 	} data;
+
 	std::string commentText;
+
+	void setupData()
+	{
+		data.timeStampYear = ntohs(data.timeStampYear);
+		data.cmtType = ntohs(data.cmtType);
+		data.cmtRef = ntohs(data.cmtRef);
+		data.count = ntohl(data.count);
+	}
 };
 
 struct EMIDChunk : public DFFChunk
@@ -252,6 +395,7 @@ struct EMIDChunk : public DFFChunk
 	struct
 	{
 	} data;
+
 	std::string	emid;
 };
 
@@ -271,6 +415,17 @@ struct MARKChunk : public DFFChunk
 	} data;
 
 	std::string	markerText;
+
+	void setupData()
+	{
+		data.hours = ntohs(data.hours);
+		data.samples = ntohl(data.samples);
+		data.offset = ntohl(data.offset);
+		data.markType = ntohs(data.markType);
+		data.markChannel = ntohs(data.markChannel);
+		data.trackFlags = ntohs(data.trackFlags);
+		data.count = ntohl(data.count);
+	}
 };
 
 struct DIARChunk : public DFFChunk
@@ -281,6 +436,11 @@ struct DIARChunk : public DFFChunk
 	} data;
 
 	std::string	artistText;
+
+	void setupData()
+	{
+		data.count = ntohl(data.count);
+	}
 };
 
 struct DITIChunk : public DFFChunk
@@ -291,6 +451,11 @@ struct DITIChunk : public DFFChunk
 	} data;
 
 	std::string	titleText;
+
+	void setupData()
+	{
+		data.count = ntohl(data.count);
+	}
 };
 
 struct DIINChunk : public DFFChunk
@@ -311,6 +476,11 @@ struct MANFChunk : public DFFChunk
 	{
 		DFFID		manID;
 	} data;
+
+	void setupData()
+	{
+		data.manID = ntohl(data.manID);
+	}
 };
 
 struct FRM8Chunk : public DFFChunk
@@ -328,6 +498,11 @@ struct FRM8Chunk : public DFFChunk
 	COMTChunk	comt;
 	DIINChunk	diin;
 	MANFChunk	manf;
+
+	void setupData()
+	{
+		data.formType = ntohl(data.formType);
+	}
 };
 
 

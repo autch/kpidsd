@@ -2,6 +2,7 @@
 #include "DSDDecoderFactory.h"
 #include "CDSFDecoderKpi.h"
 #include "CWSDDecoderKpi.h"
+#include "CDFFDecoderKpi.h"
 
 CAbstractKpi* CreateKpiDecoderInstance(LPCSTR szFileName)
 {
@@ -16,6 +17,9 @@ CAbstractKpi* CreateKpiDecoderInstance(LPCSTR szFileName)
 	}
 	if (_stricmp((char*)ext, ".wsd") == 0) {
 		kpi = new CWSDDecoderKpi();
+	}
+	if (_stricmp((char*)ext, ".dff") == 0) {
+		kpi = new CDFFDecoderKpi();
 	}
 
 	return kpi;
@@ -34,6 +38,9 @@ BOOL GetDSDTagInfo(LPCSTR cszFileName, IKmpTagInfo* pInfo)
 	}
 	if (_stricmp((char*)ext, ".wsd") == 0) {
 		return CWSDDecoderKpi::GetTagInfo(cszFileName, pInfo);
+	}
+	if (_stricmp((char*)ext, ".dff") == 0) {
+		return CDFFDecoderKpi::GetTagInfo(cszFileName, pInfo);
 	}
 
 	return FALSE;

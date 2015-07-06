@@ -33,10 +33,36 @@ public:
 		if (newPos != NULL) *newPos = newpos.QuadPart;
 		return r;
 	}
+	uint64_t Tell() const
+	{
+		LARGE_INTEGER zero = { 0 };
+
+		::SetFilePointerEx(hFile, zero, &zero, FILE_CURRENT);
+		return (uint64_t)zero.QuadPart;
+	}
 
 	BOOL Read(LPVOID buffer, DWORD bytesToRead, LPDWORD bytesRead) const
 	{
 		return ::ReadFile(hFile, buffer, bytesToRead, bytesRead, NULL);
+	}
+
+	uint32_t ReadLE32() const
+	{
+		uint32_t p;
+		Read((uint8_t*)p, sizeof p, NULL);
+		return p;
+	}
+	uint64_t ReadLE64() const
+	{
+		uint64_t p;
+		Read((uint8_t*)p, sizeof p, NULL);
+		return p;
+	}
+	uint16_t ReadLE16() const
+	{
+		uint16_t p;
+		Read((uint8_t*)p, sizeof p, NULL);
+		return p;
 	}
 
 	uint32_t ReadBE32() const
@@ -57,7 +83,6 @@ public:
 		Read((uint8_t*)p, sizeof p, NULL);
 		return ntohs(p);
 	}
-
 	uint64_t ntohllX(uint64_t be) const
 	{
 		uint8_t* p = (uint8_t*)&be;
