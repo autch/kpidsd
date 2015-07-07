@@ -102,8 +102,14 @@ WASAPI をおすすめします。
 DSDIFF フォーマットにおける DST (Direct Stream Transfer) コーデックは 
 XXX です。
 
+
 KORG AudioGate v3.0.2 で生成した DSF/DSDIFF/WSD での動作を確認しています。
+
+http://www.2l.no/hires/ でダウンロードできる DSDIFF ファイルで動作を確認
+しています。
+
 e-onkyo music で購入した DSF ファイルで動作を確認しています。
+
 1bit オーディオコンソーシアム公式サイトの WSD ファイルで確認しています。
 
 
