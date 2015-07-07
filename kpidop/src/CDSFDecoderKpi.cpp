@@ -121,17 +121,16 @@ DWORD CDSFDecoderKpi::Render(BYTE* buffer, DWORD dwSize)
 	uint64_t sampleCount = file.FmtHeader()->sample_count;
 	DWORD dwBytesPerBlockChannel = file.FmtHeader()->block_size_per_channel;
 	int bps = file.FmtHeader()->bits_per_sample;
-	LARGE_INTEGER li = { 0 };
 	DWORD dwBytesRendered;
+	uint64_t dataEndPos = file.DataOffset() + file.DataHeader()->size - 12;
+	int channels = file.FmtHeader()->channel_num;
 
 	::ZeroMemory(buffer, dwSize);
 	while (d < de) {
-		li.QuadPart = 0;
-		file.Seek(li, &li, FILE_CURRENT);
-		if (file.Header()->id3v2_pointer > 0 && (uint64_t)li.QuadPart >= file.Header()->id3v2_pointer) return 0;
+		if (file.Tell() >= dataEndPos) break;
 
-		file.Read(srcBuffer, dwBytesPerBlockChannel * file.FmtHeader()->channel_num, &dwBytesRead);
-		if (dwBytesRead == 0 || dwBytesRead < dwBytesPerBlockChannel) break;
+		file.Read(srcBuffer, dwBytesPerBlockChannel * channels, &dwBytesRead);
+		if (dwBytesRead < dwBytesPerBlockChannel * channels) break;
 
 		switch (bps) {
 		case DSF_BPS_LSB:
@@ -179,11 +178,8 @@ DWORD CDSFDecoderKpi::decodeLSBFirst(PBYTE buffer, DWORD dwSize)
 			d += dwBytesToWrite;
 		}
 		marker ^= 0xff;
-		samplesRendered++;
-		if (samplesRendered >= sampleCount)
-			goto success;
+		samplesRendered += 16;
 	}
-success:
 	last_marker = marker;
 	return d - buffer;
 }
@@ -221,11 +217,8 @@ DWORD CDSFDecoderKpi::decodeMSBFirst(PBYTE buffer, DWORD dwSize)
 			d += dwBytesToWrite;
 		}
 		marker ^= 0xff;
-		samplesRendered++;
-		if (samplesRendered >= sampleCount)
-			goto success;
+		samplesRendered += 16;
 	}
-success:
 	last_marker = marker;
 	return d - buffer;
 }

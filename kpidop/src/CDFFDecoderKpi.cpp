@@ -126,6 +126,7 @@ DWORD CDFFDecoderKpi::Render(BYTE* buffer, DWORD dwSize)
 	BYTE frame[4] = { 0, 0, 0, 0 };
 	DWORD dwBytesToWrite, dwFrameOffset;
 	int channels = file.FRM8().prop.chnl.data.numChannels;
+	uint64_t dsdEndPos = file.FRM8().dsd.OffsetToData() + file.FRM8().dsd.DataSize();
 
 	if (soundinfo.dwBitsPerSample == 24) {
 		dwBytesToWrite = 3;
@@ -138,7 +139,16 @@ DWORD CDFFDecoderKpi::Render(BYTE* buffer, DWORD dwSize)
 
 	::ZeroMemory(buffer, dwSize);
 	while (d < de) {
-		if (!file.Read(srcBuffer, srcBufferSize, &dwBytesRead))
+		DWORD dwBytesToRead = srcBufferSize;
+
+		if (file.Tell() >= dsdEndPos) break;
+
+		if (dsdEndPos - file.Tell() < dwBytesToRead)
+		{
+			dwBytesToRead = dsdEndPos - file.Tell();
+		}
+
+		if (!file.Read(srcBuffer, dwBytesToRead, &dwBytesRead))
 			break;
 		for (DWORD dwBytePos = 0; dwBytePos < dwBytesRead; dwBytePos += 2 * channels) {
 			for (int ch = 0; ch < channels; ch++) {

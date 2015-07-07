@@ -24,5 +24,4 @@ public:
 	WSD_GENERAL_INFO* Header() { return &header; }
 	WSD_DATA_SPEC* DataSpec() { return &data_spec; }
 	WSD_TEXT* Text() { return &text; }
-private:
 };

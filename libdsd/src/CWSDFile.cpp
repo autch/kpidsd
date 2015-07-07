@@ -33,13 +33,10 @@ BOOL CWSDFile::Open(LPCSTR szFileName)
 
 void CWSDFile::Reset()
 {
-	LARGE_INTEGER liDataOffset;
-
 	if (hFile == INVALID_HANDLE_VALUE)
 		return;
 
-	liDataOffset.QuadPart = header.dataOffset;
-	::SetFilePointerEx(hFile, liDataOffset, NULL, FILE_BEGIN);
+	Seek(header.dataOffset, NULL, FILE_BEGIN);
 }
 
 BOOL CWSDFile::checkHeader()

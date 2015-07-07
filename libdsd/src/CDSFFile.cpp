@@ -1,9 +1,8 @@
 #include "stdafx.h"
 #include "CDSFFile.h"
 
-CDSFFile::CDSFFile() : CLargeFile()
+CDSFFile::CDSFFile() : CLargeFile(), dataOffset(0)
 {
-	liDataOffset.QuadPart = 0;
 }
 
 CDSFFile::~CDSFFile()
@@ -26,8 +25,7 @@ BOOL CDSFFile::Open(LPCSTR szFileName)
 		return FALSE;
 	}
 
-	liDataOffset.QuadPart = 0;
-	::SetFilePointerEx(hFile, liDataOffset, &liDataOffset, FILE_CURRENT);
+	dataOffset = Tell();
 
 	Reset();
 
@@ -40,7 +38,7 @@ BOOL CDSFFile::checkHeader()
 	const DWORD DSD_ = DSF_SIGNATURE_DSD_, fmt_ = DSF_SIGNATURE_fmt_, data = DSF_SIGNATURE_data;
 
 	{
-		if (::ReadFile(hFile, &header, sizeof header, &dwBytesRead, NULL) == FALSE)
+		if (!Read(&header, sizeof header, &dwBytesRead))
 			return FALSE;
 		if (dwBytesRead != sizeof header)
 			return FALSE;
@@ -52,7 +50,7 @@ BOOL CDSFFile::checkHeader()
 			return FALSE;
 	}
 	{
-		if (::ReadFile(hFile, &fmt_header, sizeof fmt_header, &dwBytesRead, NULL) == FALSE)
+		if (!Read(&fmt_header, sizeof fmt_header, &dwBytesRead))
 			return FALSE;
 		if (dwBytesRead != sizeof fmt_header)
 			return FALSE;
@@ -81,9 +79,7 @@ BOOL CDSFFile::checkHeader()
 			return FALSE;
 	}
 	{
-		DSF_data_HEADER data_header;
-
-		if (::ReadFile(hFile, &data_header, sizeof data_header, &dwBytesRead, NULL) == FALSE)
+		if (!Read(&data_header, sizeof data_header, &dwBytesRead))
 			return FALSE;
 		if (dwBytesRead != sizeof data_header)
 			return FALSE;
@@ -98,5 +94,5 @@ void CDSFFile::Reset()
 	if (hFile == INVALID_HANDLE_VALUE)
 		return;
 
-	::SetFilePointerEx(hFile, liDataOffset, NULL, FILE_BEGIN);
+	Seek(dataOffset, NULL, FILE_BEGIN);
 }
