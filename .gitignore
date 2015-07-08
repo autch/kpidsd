@@ -230,5 +230,4 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-taglib-master/
-taglib/
+kpidop/kpidop_*.zip
