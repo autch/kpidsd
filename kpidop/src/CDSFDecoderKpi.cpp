@@ -223,9 +223,10 @@ DWORD CDSFDecoderKpi::decodeMSBFirst(PBYTE buffer, DWORD dwSize)
 	return d - buffer;
 }
 
-#include "id3v2tag.h"
-#include "DSFFile.h"
+#include "CID3V2.h"
 #include <stdlib.h>
+
+bool setID3V2AsKMPTag(CID3V2Tag& tag, ID3V2_ID frameId, IKmpTagInfo* pInfo, const char* szKMPTagName);
 
 
 BOOL CDSFDecoderKpi::GetTagInfo(const char *cszFileName, IKmpTagInfo *pInfo)
@@ -253,36 +254,54 @@ BOOL CDSFDecoderKpi::GetTagInfo(const char *cszFileName, IKmpTagInfo *pInfo)
 		delete[] buf;
 		goto fail_cleanup;
 	}
-	delete[] buf;
 
 	// file はフォーマットチェックとしてしか使わない
-
 	{
-		// TagLib::DSFFile は CDSFFile でフォーマットチェックが済んでいる前提で手抜き実装
-		TagLib::FileName filename(cszFileName);
-		TagLib::DSFFile tfile(filename);
-		TagLib::ID3v2::Tag* tag;
+		CID3V2Tag tag;
 
-		tag = reinterpret_cast<TagLib::ID3v2::Tag*>(tfile.tag());
-		if (tag != NULL) {
-			pInfo->SetValueW(SZ_KMP_TAGINFO_NAME_TITLE, tag->title().toCWString());
-			pInfo->SetValueW(SZ_KMP_TAGINFO_NAME_ARTIST, tag->artist().toCWString());
-			pInfo->SetValueW(SZ_KMP_TAGINFO_NAME_ALBUM, tag->album().toCWString());
-			pInfo->SetValueW(SZ_KMP_TAGINFO_NAME_GENRE, tag->genre().toCWString());
-			pInfo->SetValueW(SZ_KMP_TAGINFO_NAME_COMMENT, tag->comment().toCWString());
+		if (tag.Parse(buf, dwTagSize))
+		{
+			bool haveDate = false;
 
+			setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TIT2"), pInfo, SZ_KMP_TAGINFO_NAME_TITLE);
+			setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TPE1"), pInfo, SZ_KMP_TAGINFO_NAME_ARTIST);
+			setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TALB"), pInfo, SZ_KMP_TAGINFO_NAME_ALBUM);
+			setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TCON"), pInfo, SZ_KMP_TAGINFO_NAME_GENRE);
+			setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TSSE"), pInfo, SZ_KMP_TAGINFO_NAME_COMMENT);
+			setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TRCK"), pInfo, SZ_KMP_TAGINFO_NAME_TRACKNUMBER);
+			if (tag.Version() == 3)
 			{
-				char str[16];	// log10(2^32) < 11
+				std::string datetime;
+				CID3V2TextFrame f;
 
-				_snprintf_s(str, sizeof str, "%d", tag->year());
-				pInfo->SetValueA(SZ_KMP_TAGINFO_NAME_DATE, str);
-
-				_snprintf_s(str, sizeof str, "%d", tag->track());
-				pInfo->SetValueA(SZ_KMP_TAGINFO_NAME_TRACKNUMBER, str);
+				if ((f = tag.FindTextFrame(MAKE_ID3V2_ID_S("TYER"))).text != NULL) {
+					datetime.append((const char*)f.text);
+					
+					haveDate = true;
+				}
+				if ((f = tag.FindTextFrame(MAKE_ID3V2_ID_S("TDAT"))).text != NULL)
+				{
+					char szDate[8];
+					_snprintf_s(szDate, sizeof szDate, "-%.2s-%.2s", f.text, f.text + 2);
+					datetime.append(szDate);
+					haveDate = true;
+				}
+				if ((f = tag.FindTextFrame(MAKE_ID3V2_ID_S("TIME"))).text != NULL)
+				{
+					char szTime[8];
+					_snprintf_s(szTime, sizeof szTime, " %.2s:%.2s", f.text, f.text + 2);
+					datetime.append(szTime);
+					haveDate = true;
+				}
+				if (haveDate)
+					pInfo->SetValueA(SZ_KMP_TAGINFO_NAME_DATE, datetime.c_str());
 			}
+			if (!haveDate && !setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TDRC"), pInfo, SZ_KMP_TAGINFO_NAME_DATE))
+				setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TDRL"), pInfo, SZ_KMP_TAGINFO_NAME_DATE);
 		}
-
 	}
+
+	delete[] buf;
 
 	file.Close();
 	return TRUE;
@@ -290,4 +309,28 @@ BOOL CDSFDecoderKpi::GetTagInfo(const char *cszFileName, IKmpTagInfo *pInfo)
 fail_cleanup:
 	file.Close();
 	return FALSE;
+}
+
+bool setID3V2AsKMPTag(CID3V2Tag& tag, ID3V2_ID frameId, IKmpTagInfo* pInfo, const char* szKMPTagName)
+{
+	CID3V2TextFrame frame = tag.FindTextFrame(frameId);
+	if (frame.text == NULL)
+		return false;
+
+	switch (frame.encoding)
+	{
+	case ID3V2_ENCODING_ISO8859_1:
+		pInfo->SetValueA(szKMPTagName, (const char*)frame.text);
+		break;
+	case ID3V2_ENCODING_UTF16BOM:
+		pInfo->SetValueW(szKMPTagName, (const WCHAR*)(frame.text + 2));
+		break;
+	case ID3V2_ENCODING_UTF8:
+		pInfo->SetValueU8(szKMPTagName, (const char*)frame.text);
+		break;
+	case ID3V2_ENCODING_UTF16BE:
+		pInfo->SetValueW(szKMPTagName, (const WCHAR*)frame.text);
+		break;
+	}
+	return true;
 }

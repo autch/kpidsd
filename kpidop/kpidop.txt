@@ -132,16 +132,18 @@ KbMedia Player はシーク中にデータが途切れる（PCM としては正しいが、DoP
 タグ情報について
 ----------------
 
-DSF の ID3v2 タグには taglib ライブラリで対応します。ID3v2 のフレームと 
-KbMedia Player タグ情報との対応は以下のとおりです。
+DSF の ID3v2 タグには自力で対応します。ID3v2 のフレームと KbMedia Player 
+タグ情報との対応は以下のとおりです。
 
 TIT2 => タイトル
 TPE1 => アーティスト
 TALB => アルバム
 TCON => ジャンル
-TDRC => 年
-COMM => コメント
+TSSE => コメント
 TRCK => トラック番号
+（ID3v2.3 のとき）TYER, TDAT, TIME => 日付
+（上記が見つからないか、ID3v2.4 のとき）TDRC または TDRL => 日付
+
 
 DSDIFF では、Edited Master Information チャンクにある DITI と DIAR チャ
 ンクが、それぞれタイトルとアーティストに対応します。
@@ -162,21 +164,8 @@ WSD では、タイトル、アーティスト、アルバム、ジャンル、コメント、日時に対
 kpidop.kpi - DSD over PCM plugin for KbMedia Player
  Copyright (c) 2015, Autch.net.
 
-taglib Audio Meta-Data Library
- Copyright (C) 2002 - 2008 by Scott Wheeler, et al.
-
-kpidop.kpi は ID3v2 タグ対応のために taglib ライブラリをリンクしています
-（zlib は含んでいません）。taglib ライブラリは LGPL 2.1 と MPL 1.1 のデ
-ュアルライセンスです。
-
-LGPL: http://www.gnu.org/licenses/lgpl.html
-MPL: http://www.mozilla.org/MPL/MPL-1.1.html
-
-taglib ライブラリは以下のアドレスで入手できます。
-http://taglib.github.io/
-
-kpidop.kpi 自体は MIT ライセンスで配布されます。COPYING ファイルをご覧く
-ださい。
+kpidop.kpi は MIT ライセンスで配布されます。COPYING ファイルをご覧くださ
+い。
 
 
 ----
