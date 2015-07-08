@@ -282,7 +282,7 @@ BOOL CDSFDecoderKpi::GetTagInfo(const char *cszFileName, IKmpTagInfo *pInfo)
 				if ((f = tag.FindTextFrame(MAKE_ID3V2_ID_S("TDAT"))).text != NULL)
 				{
 					char szDate[8];
-					_snprintf_s(szDate, sizeof szDate, "-%.2s-%.2s", f.text, f.text + 2);
+					_snprintf_s(szDate, sizeof szDate, "-%.2s-%.2s", f.text + 2, f.text);
 					datetime.append(szDate);
 					haveDate = true;
 				}
