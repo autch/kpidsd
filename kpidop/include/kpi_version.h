@@ -3,5 +3,4 @@
 
 #define KPI_VERSION		(1 << 8 | 0) // 1.0
 #define KPI_DESC		"DSD over PCM plugin for KbMedia Player"
-#define KPI_COPYRIGHT	"Copyright(c) 2015, Autch.net; " \
-"taglib Copyright (C) 2002 - 2008 by Scott Wheeler, et al."
+#define KPI_COPYRIGHT	"Copyright(c) 2015, Autch.net"
