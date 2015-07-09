@@ -99,9 +99,9 @@ WASAPI をおすすめします。
 ・フィリップス DSDIFF v1.5
 ・1bit オーディオコンソーシアム WSD v1.1
 
-DSDIFF フォーマットにおける DST (Direct Stream Transfer) コーデックは 
-XXX です。
-
+DSDIFF フォーマットにおける DST (Direct Stream Transfer) コーデックには
+対応していないため、SACD から吸い出した音源の再生はそのままではできませ
+ん。
 
 KORG AudioGate v3.0.2 で生成した DSF/DSDIFF/WSD での動作を確認しています。
 
@@ -144,9 +144,12 @@ TRCK => トラック番号
 （ID3v2.3 のとき）TYER, TDAT, TIME => 日付
 （上記が見つからないか、ID3v2.4 のとき）TDRC または TDRL => 日付
 
+ID3v2 タグの動作確認には、KORG AudioGate で生成される DSF と e-onkyo 
+music で購入した DSF を使っています。
 
 DSDIFF では、Edited Master Information チャンクにある DITI と DIAR チャ
-ンクが、それぞれタイトルとアーティストに対応します。
+ンクが、それぞれタイトルとアーティストに対応します。COMT チャンクがあれ
+ば、その中の最初のものがコメントとして使われます。
 
 DSDIFF の仕様に文字コードの規定がないので、これらが漢字を含むときはタグ
 情報自体が記録されていないことがあります。もしあれば本プラグインとしては 
@@ -166,6 +169,15 @@ kpidop.kpi - DSD over PCM plugin for KbMedia Player
 
 kpidop.kpi は MIT ライセンスで配布されます。COPYING ファイルをご覧くださ
 い。
+
+
+ソースコード
+------------
+
+ソースコードは以下の GitHub リポジトリから入手できます。
+https://github.com/autch/kpidsd
+
+Visual Studio 2013 Comminuty でビルドしています。
 
 
 ----

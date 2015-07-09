@@ -32,6 +32,10 @@ BOOL CDFFDecoderKpi::Open(LPSTR szFileName, SOUNDINFO* pInfo)
 	if (!file.Open(szFileName))
 		return FALSE;
 
+	// DST compression is not supported
+	if (file.FRM8().prop.cmpr.compressionName != CMPR_NAME_DSD)
+		return FALSE;
+
 	uint32_t dsd_fs = file.FRM8().prop.fs.data.sampleRate;
 	uint32_t channels = file.FRM8().prop.chnl.data.numChannels;
 
@@ -183,6 +187,12 @@ BOOL CDFFDecoderKpi::GetTagInfo(const char *cszFileName, IKmpTagInfo *pInfo)
 		pInfo->SetValueA(SZ_KMP_TAGINFO_NAME_ARTIST, file.FRM8().diin.diar.artistText.c_str());
 	if (file.FRM8().diin.diti.titleText.length() > 0)
 		pInfo->SetValueA(SZ_KMP_TAGINFO_NAME_TITLE, file.FRM8().diin.diti.titleText.c_str());
+	if (file.FRM8().comt.comments.size() > 0)
+	{
+		std::vector<Comment>::iterator it = file.FRM8().comt.comments.begin();
+		if (it != file.FRM8().comt.comments.end())
+			pInfo->SetValueA(SZ_KMP_TAGINFO_NAME_COMMENT, it->commentText.c_str());
+	}
 
 	file.Close();
 	return TRUE;

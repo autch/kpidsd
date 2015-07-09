@@ -99,9 +99,27 @@ bool CDFFFile::readFRM8(ChunkStep& step, DFFChunkHeader& hdr)
 		stack.pop(); // ascend to parent (FRM8) chunk
 		break;
 	}
+	case DFFID_COMT:
+	{
+		frm8.comt.header = hdr;
+		frm8.comt.offsetToData = step.dataOffset;
+		Read(&frm8.comt.data, sizeof frm8.comt.data, NULL);
+		frm8.comt.setupData();
+		for (uint32_t i = 0; i < frm8.comt.data.numComments; i++)
+		{
+			Comment comment;
+
+			Read(&comment.data, sizeof comment.data, NULL);
+			comment.setupData();
+			assignBuffer(comment.data.count, comment.commentText);
+			frm8.comt.comments.push_back(comment);
+		}
+		Seek(step.dataEndOffset, NULL, FILE_BEGIN); // may contain padding byte(s)
+		stack.pop(); // ascend to parent (FRM8) chunk
+		break;
+	}
 	case DFFID_DST_:
 	case DFFID_DSTI:
-	case DFFID_COMT:
 	case DFFID_MANF:
 	default:
 		return false;

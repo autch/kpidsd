@@ -361,7 +361,7 @@ struct COMTChunk : public DFFChunk
 
 	void setupData()
 	{
-		data.numComments = ntohl(data.numComments);
+		data.numComments = ntohs(data.numComments);
 	}
 };
 
