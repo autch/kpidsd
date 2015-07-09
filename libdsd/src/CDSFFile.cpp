@@ -20,7 +20,8 @@ BOOL CDSFFile::Open(LPCSTR szFileName)
 	if (!CLargeFile::Open(szFileName))
 		return FALSE;
 
-	if (!checkHeader()) {
+	if (!checkHeader())
+	{
 		Close();
 		return FALSE;
 	}
@@ -63,7 +64,8 @@ BOOL CDSFFile::checkHeader()
 		if (fmt_header.format_id != DSF_FMTID_RAW)
 			return FALSE;
 
-		switch (fmt_header.channel_type) {
+		switch (fmt_header.channel_type)
+		{
 		case DSF_CHTYPE_MONO:
 		case DSF_CHTYPE_STEREO:
 		case DSF_CHTYPE_3CHS:

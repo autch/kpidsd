@@ -148,15 +148,10 @@ bool CDFFFile::readPROP(ChunkStep& step, DFFChunkHeader& hdr)
 		frm8.prop.cmpr.offsetToData = step.dataOffset;
 		Read(&frm8.prop.cmpr.data, sizeof frm8.prop.cmpr.data, NULL);
 		frm8.prop.cmpr.setupData();
-		{
-			uint64_t bytesToRead = frm8.prop.cmpr.data.count;
-			char* buf = new char[bytesToRead + 1];
-			buf[bytesToRead] = '\0';
-			Read((uint8_t*)buf, bytesToRead, NULL);
-			frm8.prop.cmpr.compressionName.assign(buf);
-			delete[] buf;
-			Seek(step.dataEndOffset, NULL, FILE_BEGIN);
-		}
+		
+		assignBuffer(frm8.prop.cmpr.data.count, frm8.prop.cmpr.compressionName);
+		Seek(step.dataEndOffset, NULL, FILE_BEGIN);
+
 		stack.pop();	// ascend to parent (PROP) chunk
 		break;
 	case DFFID_ABSS:
@@ -196,15 +191,10 @@ bool CDFFFile::readDIIN(ChunkStep& step, DFFChunkHeader& hdr)
 		frm8.diin.diar.offsetToData = step.dataOffset;
 		Read(&frm8.diin.diar.data, sizeof frm8.diin.diar.data, NULL);
 		frm8.diin.diar.setupData();
-		{
-			uint64_t bytesToRead = frm8.diin.diar.data.count;
-			char* buf = new char[bytesToRead + 1];
-			buf[bytesToRead] = '\0';
-			Read((uint8_t*)buf, bytesToRead, NULL);
-			frm8.diin.diar.artistText.assign(buf);
-			delete[] buf;
-			Seek(step.dataEndOffset, NULL, FILE_BEGIN); // may contain padding byte
-		}
+
+		assignBuffer(frm8.diin.diar.data.count, frm8.diin.diar.artistText);
+		Seek(step.dataEndOffset, NULL, FILE_BEGIN); // may contain padding byte
+
 		stack.pop(); // ascend to parent (DIIN) chunk
 		break;
 	}
@@ -214,15 +204,10 @@ bool CDFFFile::readDIIN(ChunkStep& step, DFFChunkHeader& hdr)
 		frm8.diin.diti.offsetToData = step.dataOffset;
 		Read(&frm8.diin.diti.data, sizeof frm8.diin.diti.data, NULL);
 		frm8.diin.diti.setupData();
-		{
-			uint64_t bytesToRead = frm8.diin.diti.data.count;
-			char* buf = new char[bytesToRead + 1];
-			buf[bytesToRead] = '\0';
-			Read((uint8_t*)buf, bytesToRead, NULL);
-			frm8.diin.diti.titleText.assign(buf);
-			delete[] buf;
-			Seek(step.dataEndOffset, NULL, FILE_BEGIN);
-		}
+
+		assignBuffer(frm8.diin.diti.data.count, frm8.diin.diti.titleText);
+		Seek(step.dataEndOffset, NULL, FILE_BEGIN); // may contain padding byte
+
 		stack.pop(); // ascend to parent (DIIN) chunk
 		break;
 	}
@@ -230,4 +215,13 @@ bool CDFFFile::readDIIN(ChunkStep& step, DFFChunkHeader& hdr)
 		return false;
 	}
 	return true;
+}
+
+void CDFFFile::assignBuffer(uint32_t bytesToRead, std::string& target)
+{
+	uint8_t* buf = new uint8_t[bytesToRead + 1];
+	buf[bytesToRead] = '\0';
+	Read(buf, bytesToRead, NULL);
+	target.assign((const char*)buf);
+	delete[] buf;
 }

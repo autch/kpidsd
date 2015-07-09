@@ -61,9 +61,7 @@ bool CID3V2Tag::Parse(uint8_t* data, uint32_t size)
 			extHeader3.flags2 = read8(p);
 			extHeader3.padding_size = readSyncInt32(p);
 			if (ID3V24_EXT_CRC(extHeader3.flags1))
-			{
 				p += 4;
-			}
 		}
 
 		break;

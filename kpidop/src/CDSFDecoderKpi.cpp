@@ -11,14 +11,27 @@ CDSFDecoderKpi::~CDSFDecoderKpi()
 	Close();
 }
 
+void CDSFDecoderKpi::Close()
+{
+	file.Close();
+	if (srcBuffer != NULL)
+	{
+		delete[] srcBuffer;
+		srcBuffer = NULL;
+	}
+}
+
 BOOL CDSFDecoderKpi::Open(LPSTR szFileName, SOUNDINFO* pInfo)
 {
 	if (!file.Open(szFileName))
 		return FALSE;
 
-	soundinfo.dwChannels = file.FmtHeader()->channel_num;
+	uint32_t dsd_fs = file.FmtHeader()->sampling_frequency;
+	uint32_t channels = file.FmtHeader()->channel_num;
 
-	switch (file.FmtHeader()->sampling_frequency) {
+	soundinfo.dwChannels = channels;
+
+	switch (dsd_fs) {
 	case DSD_FREQ_64FS:
 		soundinfo.dwSamplesPerSec = DOP_FREQ_64FS;
 		break;
@@ -27,23 +40,24 @@ BOOL CDSFDecoderKpi::Open(LPSTR szFileName, SOUNDINFO* pInfo)
 		break;
 	default:
 		// 256FS とかはこっちを通す
-		if (file.FmtHeader()->sampling_frequency % 44100 == 0) {
-			soundinfo.dwSamplesPerSec = file.FmtHeader()->sampling_frequency / 16;
-		} else
+		if (dsd_fs % 44100 == 0)
+			soundinfo.dwSamplesPerSec = dsd_fs / 16;
+		else
 			goto fail_cleanup;
 	}
 	soundinfo.dwReserved1 = soundinfo.dwReserved2 = 0;
 	soundinfo.dwSeekable = 1;
 
-	switch (pInfo->dwBitsPerSample) {
+	switch (pInfo->dwBitsPerSample)
+	{
 	case 0:
 	case 24:
 		soundinfo.dwBitsPerSample = 24;
-		soundinfo.dwUnitRender = file.FmtHeader()->block_size_per_channel * soundinfo.dwChannels * 3 / 2;	// FIXME: 本当？ 
+		soundinfo.dwUnitRender = file.FmtHeader()->block_size_per_channel * channels * 3 / 2;	// FIXME: 本当？ 
 		break;
 	case 32:
 		soundinfo.dwBitsPerSample = pInfo->dwBitsPerSample;
-		soundinfo.dwUnitRender = file.FmtHeader()->block_size_per_channel * soundinfo.dwChannels * 2;
+		soundinfo.dwUnitRender = file.FmtHeader()->block_size_per_channel * channels * 2;
 		break;
 	default:
 		goto fail_cleanup;
@@ -51,12 +65,12 @@ BOOL CDSFDecoderKpi::Open(LPSTR szFileName, SOUNDINFO* pInfo)
 
 	uint64_t qwSamples = file.FmtHeader()->sample_count;
 	qwSamples *= 1000;
-	qwSamples /= file.FmtHeader()->sampling_frequency;
+	qwSamples /= dsd_fs;
 	soundinfo.dwLength = (DWORD)qwSamples;
 
 	memcpy(pInfo, &soundinfo, sizeof soundinfo);
 
-	srcBufferSize = file.FmtHeader()->block_size_per_channel * soundinfo.dwChannels;
+	srcBufferSize = file.FmtHeader()->block_size_per_channel * channels;
 	srcBuffer = new BYTE[srcBufferSize];
 
 	Reset();
@@ -66,15 +80,6 @@ BOOL CDSFDecoderKpi::Open(LPSTR szFileName, SOUNDINFO* pInfo)
 fail_cleanup:
 	Close();
 	return FALSE;
-}
-
-void CDSFDecoderKpi::Close()
-{
-	file.Close();
-	if (srcBuffer != NULL) {
-		delete[] srcBuffer;
-		srcBuffer = NULL;
-	}
 }
 
 void CDSFDecoderKpi::Reset()
@@ -126,13 +131,15 @@ DWORD CDSFDecoderKpi::Render(BYTE* buffer, DWORD dwSize)
 	int channels = file.FmtHeader()->channel_num;
 
 	::ZeroMemory(buffer, dwSize);
-	while (d < de) {
+	while (d < de)
+	{
 		if (file.Tell() >= dataEndPos) break;
 
 		file.Read(srcBuffer, dwBytesPerBlockChannel * channels, &dwBytesRead);
 		if (dwBytesRead < dwBytesPerBlockChannel * channels) break;
 
-		switch (bps) {
+		switch (bps)
+		{
 		case DSF_BPS_LSB:
 			dwBytesRendered = decodeLSBFirst(d, de - d);
 			break;
@@ -156,19 +163,23 @@ DWORD CDSFDecoderKpi::decodeLSBFirst(PBYTE buffer, DWORD dwSize)
 	DWORD dwBytesToWrite, dwFrameOffset;
 	DWORD channels = file.FmtHeader()->channel_num;
 	
-	if (soundinfo.dwBitsPerSample == 24) {
+	if (soundinfo.dwBitsPerSample == 24)
+	{
 		dwBytesToWrite = 3;
 		dwFrameOffset = 1;
 	}
-	else {
+	else
+	{
 		dwBytesToWrite = 4;
 		dwFrameOffset = 0;
 	}
 
 	for (DWORD dwByteOffset = 0;
 		dwByteOffset < dwBytesPerBlockChannel && samplesRendered < sampleCount;
-		dwByteOffset += DOP_DSD_BYTES_PER_FRAME) {
-		for (unsigned ch = 0; ch < channels; ch++) {
+		dwByteOffset += DOP_DSD_BYTES_PER_FRAME)
+	{
+		for (unsigned ch = 0; ch < channels; ch++)
+		{
 			PBYTE p = srcBuffer + (dwBytesPerBlockChannel * ch) + dwByteOffset;
 
 			frame[3] = marker;
@@ -195,19 +206,23 @@ DWORD CDSFDecoderKpi::decodeMSBFirst(PBYTE buffer, DWORD dwSize)
 	DWORD dwBytesToWrite, dwFrameOffset;
 	DWORD channels = file.FmtHeader()->channel_num;
 
-	if (soundinfo.dwBitsPerSample == 24) {
+	if (soundinfo.dwBitsPerSample == 24)
+	{
 		dwBytesToWrite = 3;
 		dwFrameOffset = 1;
 	}
-	else {
+	else
+	{
 		dwBytesToWrite = 4;
 		dwFrameOffset = 0;
 	}
 
 	for (DWORD dwByteOffset = 0;
 		dwByteOffset < dwBytesPerBlockChannel && samplesRendered < sampleCount;
-		dwByteOffset += DOP_DSD_BYTES_PER_FRAME) {
-		for (unsigned ch = 0; ch < channels; ch++) {
+		dwByteOffset += DOP_DSD_BYTES_PER_FRAME)
+	{
+		for (unsigned ch = 0; ch < channels; ch++)
+		{
 			PBYTE p = srcBuffer + (dwBytesPerBlockChannel * ch) + dwByteOffset;
 
 			frame[3] = marker;
@@ -228,7 +243,6 @@ DWORD CDSFDecoderKpi::decodeMSBFirst(PBYTE buffer, DWORD dwSize)
 
 bool setID3V2AsKMPTag(CID3V2Tag& tag, ID3V2_ID frameId, IKmpTagInfo* pInfo, const char* szKMPTagName);
 
-
 BOOL CDSFDecoderKpi::GetTagInfo(const char *cszFileName, IKmpTagInfo *pInfo)
 {
 	CDSFFile file;
@@ -236,7 +250,8 @@ BOOL CDSFDecoderKpi::GetTagInfo(const char *cszFileName, IKmpTagInfo *pInfo)
 	if (!file.Open(cszFileName))
 		return FALSE;
 	
-	if (file.Header()->id3v2_pointer == 0) {
+	if (file.Header()->id3v2_pointer == 0)
+	{
 		file.Close();
 		return TRUE;
 	}
@@ -244,13 +259,14 @@ BOOL CDSFDecoderKpi::GetTagInfo(const char *cszFileName, IKmpTagInfo *pInfo)
 	if (!file.Seek(file.Header()->id3v2_pointer, NULL, FILE_BEGIN))
 		goto fail_cleanup;
 
-	DWORD dwTagSize = (DWORD)(file.FileSize().QuadPart - file.Header()->id3v2_pointer);
+	DWORD dwTagSize = (DWORD)(file.FileSize() - file.Header()->id3v2_pointer);
 	BYTE* buf = new BYTE[dwTagSize];
 
 	DWORD dwBytesRead = 0;
 
 	file.Read(buf, dwTagSize, &dwBytesRead);
-	if (dwBytesRead != dwTagSize) {
+	if (dwBytesRead != dwTagSize) 
+	{
 		delete[] buf;
 		goto fail_cleanup;
 	}
@@ -269,14 +285,15 @@ BOOL CDSFDecoderKpi::GetTagInfo(const char *cszFileName, IKmpTagInfo *pInfo)
 			setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TCON"), pInfo, SZ_KMP_TAGINFO_NAME_GENRE);
 			setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TSSE"), pInfo, SZ_KMP_TAGINFO_NAME_COMMENT);
 			setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TRCK"), pInfo, SZ_KMP_TAGINFO_NAME_TRACKNUMBER);
+
 			if (tag.Version() == 3)
 			{
 				std::string datetime;
 				CID3V2TextFrame f;
 
-				if ((f = tag.FindTextFrame(MAKE_ID3V2_ID_S("TYER"))).text != NULL) {
+				if ((f = tag.FindTextFrame(MAKE_ID3V2_ID_S("TYER"))).text != NULL)
+				{
 					datetime.append((const char*)f.text);
-					
 					haveDate = true;
 				}
 				if ((f = tag.FindTextFrame(MAKE_ID3V2_ID_S("TDAT"))).text != NULL)

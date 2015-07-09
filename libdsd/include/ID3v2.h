@@ -91,9 +91,4 @@ struct ID3V2FrameHeader
 	uint8_t flags2;
 };
 
-struct ID3v2
-{
-
-};
-
 #pragma pack(pop)

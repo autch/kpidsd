@@ -7,7 +7,6 @@
 struct CID3V2Frame;
 struct CID3V2TextFrame;
 
-
 typedef std::map<ID3V2_ID, CID3V2Frame> ID3V2FrameMap;
 typedef std::map<ID3V2_ID, CID3V2Frame> ID3V2TextFrameMap;
 

@@ -20,12 +20,12 @@ private:
 	FRM8Chunk	frm8;
 	std::stack<ChunkStep> stack;
 
-	bool CDFFFile::readChunkHeader(DFFChunkHeader& header, ChunkStep& step);
+	bool readChunkHeader(DFFChunkHeader& header, ChunkStep& step);
+	void assignBuffer(uint32_t bytesToRead, std::string& target);
 
-
-	bool CDFFFile::readFRM8(ChunkStep& step, DFFChunkHeader& hdr);
-	bool CDFFFile::readPROP(ChunkStep& step, DFFChunkHeader& hdr);
-	bool CDFFFile::readDIIN(ChunkStep& step, DFFChunkHeader& hdr);
+	bool readFRM8(ChunkStep& step, DFFChunkHeader& hdr);
+	bool readPROP(ChunkStep& step, DFFChunkHeader& hdr);
+	bool readDIIN(ChunkStep& step, DFFChunkHeader& hdr);
 public:
 	CDFFFile();
 	~CDFFFile();
@@ -35,5 +35,4 @@ public:
 	void Reset() { Seek(frm8.dsd.OffsetToData(), NULL, FILE_BEGIN); }
 	BOOL Open(LPCSTR cszFileName);
 	void Close();
-
 };

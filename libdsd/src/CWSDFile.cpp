@@ -21,7 +21,8 @@ BOOL CWSDFile::Open(LPCSTR szFileName)
 	if (!CLargeFile::Open(szFileName))
 		return FALSE;
 
-	if (!checkHeader()) {
+	if (!checkHeader())
+	{
 		Close();
 		return FALSE;
 	}
@@ -72,7 +73,8 @@ BOOL CWSDFile::checkHeader()
 	data_spec.timeReferenceHi = ntohll(data_spec.timeReferenceLo);	// typo‚Å‚Í‚È‚¢
 	data_spec.timeReferenceLo = ntohll(data_spec.timeReferenceHi);	// typo‚Å‚Í‚È‚¢
 
-	if (header.textOffset != 0) {
+	if (header.textOffset != 0)
+	{
 		Seek(header.textOffset, NULL, FILE_BEGIN);
 
 		if (Read(&text, sizeof text, &dwBytesRead) == FALSE)

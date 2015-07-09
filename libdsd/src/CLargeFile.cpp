@@ -13,7 +13,8 @@ CLargeFile::~CLargeFile()
 
 void CLargeFile::Close()
 {
-	if (hFile != INVALID_HANDLE_VALUE) {
+	if (hFile != INVALID_HANDLE_VALUE)
+	{
 		::CloseHandle(hFile);
 		hFile = INVALID_HANDLE_VALUE;
 	}

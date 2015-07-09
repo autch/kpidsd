@@ -16,13 +16,8 @@ public:
 	virtual void Reset() { Seek(0, NULL, FILE_BEGIN); }
 
 	HANDLE File() const { return hFile; }
-	LARGE_INTEGER FileSize() const { return liFileSize; }
-	// uint64_t FileSize() const { return liFileSize.QuadPart; }
+	uint64_t FileSize() const { return liFileSize.QuadPart; }
 
-	BOOL Seek(LARGE_INTEGER distance, PLARGE_INTEGER newPos, DWORD moveMethod) const
-	{
-		return ::SetFilePointerEx(hFile, distance, newPos, moveMethod);
-	}
 	BOOL Seek(uint64_t distance, uint64_t* newPos, DWORD moveMethod) const
 	{
 		LARGE_INTEGER lidist, newpos = { 0 };
@@ -46,43 +41,6 @@ public:
 		return ::ReadFile(hFile, buffer, bytesToRead, bytesRead, NULL);
 	}
 
-	uint32_t ReadLE32() const
-	{
-		uint32_t p;
-		Read((uint8_t*)p, sizeof p, NULL);
-		return p;
-	}
-	uint64_t ReadLE64() const
-	{
-		uint64_t p;
-		Read((uint8_t*)p, sizeof p, NULL);
-		return p;
-	}
-	uint16_t ReadLE16() const
-	{
-		uint16_t p;
-		Read((uint8_t*)p, sizeof p, NULL);
-		return p;
-	}
-
-	uint32_t ReadBE32() const
-	{
-		uint32_t p;
-		Read((uint8_t*)p, sizeof p, NULL);
-		return ntohl(p);
-	}
-	uint64_t ReadBE64() const
-	{
-		uint64_t p;
-		Read((uint8_t*)p, sizeof p, NULL);
-		return ntohll(p);
-	}
-	uint16_t ReadBE16() const
-	{
-		uint16_t p;
-		Read((uint8_t*)p, sizeof p, NULL);
-		return ntohs(p);
-	}
 	uint64_t ntohllX(uint64_t be) const
 	{
 		uint8_t* p = (uint8_t*)&be;
