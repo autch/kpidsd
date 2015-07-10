@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "CDSFDecoderKpi.h"
 #include "dop.h"
+#include "kpi.h"
 
 CDSFDecoderKpi::CDSFDecoderKpi() : file(), srcBuffer(NULL)
 {
@@ -48,6 +49,8 @@ BOOL CDSFDecoderKpi::Open(LPSTR szFileName, SOUNDINFO* pInfo)
 	soundinfo.dwReserved1 = soundinfo.dwReserved2 = 0;
 	soundinfo.dwSeekable = 1;
 
+	pInfo->dwBitsPerSample = GetMyProfileInt("kpidop", "BitsPerDoPFrame", pInfo->dwBitsPerSample);
+
 	switch (pInfo->dwBitsPerSample)
 	{
 	case 0:
@@ -56,11 +59,10 @@ BOOL CDSFDecoderKpi::Open(LPSTR szFileName, SOUNDINFO* pInfo)
 		soundinfo.dwUnitRender = file.FmtHeader()->block_size_per_channel * channels * 3 / 2;	// FIXME: –{“–H 
 		break;
 	case 32:
-		soundinfo.dwBitsPerSample = pInfo->dwBitsPerSample;
+	default:
+		soundinfo.dwBitsPerSample = 32;
 		soundinfo.dwUnitRender = file.FmtHeader()->block_size_per_channel * channels * 2;
 		break;
-	default:
-		goto fail_cleanup;
 	}
 
 	uint64_t qwSamples = file.FmtHeader()->sample_count;

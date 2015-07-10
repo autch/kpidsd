@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "CWSDDecoderKpi.h"
 #include "dop.h"
+#include "kpi.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -57,6 +58,8 @@ BOOL CWSDDecoderKpi::Open(LPSTR szFileName, SOUNDINFO* pInfo)
 	soundinfo.dwReserved1 = soundinfo.dwReserved2 = 0;
 	soundinfo.dwSeekable = 1;
 
+	pInfo->dwBitsPerSample = GetMyProfileInt("kpidop", "BitsPerDoPFrame", pInfo->dwBitsPerSample);
+
 	switch (pInfo->dwBitsPerSample)
 	{
 	case 0:
@@ -65,11 +68,10 @@ BOOL CWSDDecoderKpi::Open(LPSTR szFileName, SOUNDINFO* pInfo)
 		soundinfo.dwUnitRender = 3 * channels * SAMPLES_PER_BLOCK / 2;
 		break;
 	case 32:
-		soundinfo.dwBitsPerSample = pInfo->dwBitsPerSample;
+	default:
+		soundinfo.dwBitsPerSample = 32;
 		soundinfo.dwUnitRender = 4 * channels * SAMPLES_PER_BLOCK / 2;
 		break;
-	default:
-		goto fail_cleanup;
 	}
 
 	{

@@ -74,8 +74,8 @@
       </Command>
     </CustomBuildStep>
     <PostBuildEvent>
-      <Command>copy /y $(TargetPath) $(KMPPluginsPath)
-copy /y $(ProjectDir)kpidop.txt $(KMPPluginsPath)
+      <Command>copy /y "$(TargetPath)" "$(KMPPluginsPath)"
+copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)"
 </Command>
     </PostBuildEvent>
     <ResourceCompile>
@@ -107,8 +107,8 @@ copy /y $(ProjectDir)kpidop.txt $(KMPPluginsPath)
       </Command>
     </CustomBuildStep>
     <PostBuildEvent>
-      <Command>copy /y $(TargetPath) $(KMPPluginsPath)
-copy /y $(ProjectDir)kpidop.txt $(KMPPluginsPath)
+      <Command>copy /y "$(TargetPath)" "$(KMPPluginsPath)"
+copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)"
 </Command>
     </PostBuildEvent>
     <ResourceCompile>
