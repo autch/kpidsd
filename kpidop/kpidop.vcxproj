@@ -127,7 +127,6 @@ copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)"
     <ClInclude Include="include\kpi_version.h" />
     <ClInclude Include="include\stdafx.h" />
     <ClInclude Include="include\targetver.h" />
-    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="kpidop.def" />
@@ -152,9 +151,6 @@ copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)"
   </ItemGroup>
   <ItemGroup>
     <Text Include="kpidop.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="kpidop.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

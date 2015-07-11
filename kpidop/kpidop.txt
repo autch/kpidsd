@@ -193,6 +193,13 @@ https://github.com/autch/kpidsd
 Visual Studio 2013 Comminuty ‚Åƒrƒ‹ƒh‚µ‚Ä‚¢‚Ü‚·B
 
 
+—š—ğ
+----
+
+v1.0.0 (65536)
+        ‰”Å
+
+
 ----
 Autch
 autch@autch.net

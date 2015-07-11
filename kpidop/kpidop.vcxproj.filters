@@ -45,9 +45,6 @@
     <ClInclude Include="include\CWSDDecoderKpi.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="include\CDFFDecoderKpi.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -85,10 +82,5 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="kpidop.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="kpidop.rc">
-      <Filter>リソース ファイル</Filter>
-    </ResourceCompile>
   </ItemGroup>
 </Project>
