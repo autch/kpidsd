@@ -108,13 +108,14 @@ bool CID3V2Tag::Parse(uint8_t* data, uint32_t size)
 	return true;
 }
 
-CID3V2TextFrame CID3V2Tag::FindTextFrame(ID3V2_ID id)
+bool CID3V2Tag::FindTextFrame(ID3V2_ID id, CID3V2TextFrame& found)
 {
 	ID3V2FrameMap::iterator it = frames.find(id);
 	if (it == frames.end())
-		return CID3V2TextFrame();
+		return false;
 	if (it->second.id[3] != 'T')
-		return CID3V2TextFrame();
+		return false;
 
-	return CID3V2TextFrame(it->second);
+	found = it->second;
+	return true;
 }

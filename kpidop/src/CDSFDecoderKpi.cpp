@@ -310,19 +310,19 @@ DWORD CDSFDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, 
 					std::string datetime;
 					CID3V2TextFrame f;
 
-					if ((f = tag.FindTextFrame(MAKE_ID3V2_ID_S("TYER"))).text != NULL)
+					if (tag.FindTextFrame(MAKE_ID3V2_ID_S("TYER"), f))
 					{
 						datetime.append((const char*)f.text);
 						haveDate = true;
 					}
-					if ((f = tag.FindTextFrame(MAKE_ID3V2_ID_S("TDAT"))).text != NULL)
+					if (tag.FindTextFrame(MAKE_ID3V2_ID_S("TDAT"), f))
 					{
 						char szDate[8];
 						_snprintf_s(szDate, sizeof szDate, "-%.2s-%.2s", f.text + 2, f.text);
 						datetime.append(szDate);
 						haveDate = true;
 					}
-					if ((f = tag.FindTextFrame(MAKE_ID3V2_ID_S("TIME"))).text != NULL)
+					if (tag.FindTextFrame(MAKE_ID3V2_ID_S("TIME"), f))
 					{
 						char szTime[8];
 						_snprintf_s(szTime, sizeof szTime, " %.2s:%.2s", f.text, f.text + 2);
@@ -345,8 +345,9 @@ DWORD CDSFDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, 
 
 bool setID3V2AsKMPTag(CID3V2Tag& tag, ID3V2_ID frameId, IKpiTagInfo* pInfo, const wchar_t* szKMPTagName)
 {
-	CID3V2TextFrame frame = tag.FindTextFrame(frameId);
-	if (frame.text == NULL)
+	CID3V2TextFrame frame;
+	
+	if(!tag.FindTextFrame(frameId, frame))
 		return false;
 
 	switch (frame.encoding)

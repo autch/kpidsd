@@ -35,10 +35,10 @@ protected:
 		uint32_t r = 0;
 
 		read(buf, p, 4);
-		r =   (buf[0] << 24)
+		r = (buf[0] << 24)
 			| (buf[1] << 16)
 			| (buf[2] << 8)
-			|  buf[3];
+			| buf[3];
 		return r;
 	}
 
@@ -68,7 +68,8 @@ public:
 	int Version() const { return header.version; }
 
 	bool Parse(uint8_t* data, uint32_t size);
-	CID3V2TextFrame FindTextFrame(ID3V2_ID id);
+	bool FindTextFrame(ID3V2_ID id, CID3V2TextFrame& found);
+
 };
 
 
@@ -78,7 +79,7 @@ struct CID3V2Frame
 	ID3V2FrameHeader header;
 	uint8_t* data;
 
-	CID3V2Frame() : data(NULL)
+	CID3V2Frame() : data(NULL), header{ 0, 0, 0, 0 }
 	{
 		memset(id, 0, sizeof id);
 	}
