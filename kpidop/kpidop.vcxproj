@@ -73,25 +73,25 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <TargetExt>.kpi</TargetExt>
-    <IncludePath>C:\usr\local\kbmed280_beta23\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(KMPPluginsPath)\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <TargetExt>.kpi</TargetExt>
-    <IncludePath>C:\usr\local\kbmed280_beta23\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(KMPPluginsPath)\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.kpi</TargetExt>
-    <IncludePath>C:\usr\local\kbmed280_beta23\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(KMPPluginsPath)\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.kpi</TargetExt>
-    <IncludePath>C:\usr\local\kbmed280_beta23\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(KMPPluginsPath)\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -115,8 +115,8 @@
       </Command>
     </CustomBuildStep>
     <PostBuildEvent>
-      <Command>copy /y "$(TargetPath)" "$(KMPPluginsPath)"
-copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)"
+      <Command>copy /y "$(TargetPath)" "$(KMPPluginsPath)\x86\Plugins"
+copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)\x86\Plugins"
 </Command>
     </PostBuildEvent>
     <ResourceCompile>
@@ -144,8 +144,8 @@ copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)"
       </Command>
     </CustomBuildStep>
     <PostBuildEvent>
-      <Command>copy /y "$(TargetPath)" "$(KMPPluginsPath)"
-copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)"
+      <Command>copy /y "$(TargetPath)" "$(KMPPluginsPath)\x64\Plugins"
+copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)\x64\Plugins"
 </Command>
     </PostBuildEvent>
     <ResourceCompile>
@@ -177,8 +177,8 @@ copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)"
       </Command>
     </CustomBuildStep>
     <PostBuildEvent>
-      <Command>copy /y "$(TargetPath)" "$(KMPPluginsPath)"
-copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)"
+      <Command>copy /y "$(TargetPath)" "$(KMPPluginsPath)\x86\Plugins"
+copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)\x86\Plugins"
 </Command>
     </PostBuildEvent>
     <ResourceCompile>
@@ -210,8 +210,8 @@ copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)"
       </Command>
     </CustomBuildStep>
     <PostBuildEvent>
-      <Command>copy /y "$(TargetPath)" "$(KMPPluginsPath)"
-copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)"
+      <Command>copy /y "$(TargetPath)" "$(KMPPluginsPath)\x64\Plugins"
+copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)\x64\Plugins"
 </Command>
     </PostBuildEvent>
     <ResourceCompile>

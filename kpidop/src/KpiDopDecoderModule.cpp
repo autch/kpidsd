@@ -18,7 +18,7 @@ static const GUID kpidop_GUID =
 #else
 #define DEBUG_MSG		L""
 #endif
-static const wchar_t* kpi_description = L"DSD over PCM frames plugin for KbMedia Player" DEBUG_MSG;
+static const wchar_t* kpi_description = L"DSD Audio over PCM frames plugin for KbMedia Player" DEBUG_MSG;
 static const wchar_t* kpi_copyright = L"Copyright(c) 2015, 2016, Autch.net";
 static const wchar_t* kpi_supportExts = L".dsf/.dff/.wsd";
 
