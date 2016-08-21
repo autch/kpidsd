@@ -1,9 +1,8 @@
 #include "stdafx.h"
 #include "CLargeFile.h"
 
-CLargeFile::CLargeFile() : hFile(INVALID_HANDLE_VALUE)
+CLargeFile::CLargeFile() : hFile(NULL)
 {
-	liFileSize.QuadPart = 0;
 }
 
 CLargeFile::~CLargeFile()
@@ -13,20 +12,9 @@ CLargeFile::~CLargeFile()
 
 void CLargeFile::Close()
 {
-	if (hFile != INVALID_HANDLE_VALUE)
-	{
-		::CloseHandle(hFile);
-		hFile = INVALID_HANDLE_VALUE;
+	if (hFile != NULL) {
+		hFile->Close();
+		hFile = NULL;
+		// do not `delete hFile` here, it's done by decoder
 	}
-}
-
-BOOL CLargeFile::Open(LPCSTR szFileName)
-{
-	hFile = ::CreateFile(szFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (hFile == INVALID_HANDLE_VALUE)
-		return FALSE;
-
-	::GetFileSizeEx(hFile, &liFileSize);
-
-	return TRUE;
 }

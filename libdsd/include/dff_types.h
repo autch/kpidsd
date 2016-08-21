@@ -123,7 +123,7 @@ namespace
 		return r;
 	}
 
-	uint32_t ntohl(uint32_t be)
+	uint32_t dff_ntohl(uint32_t be)
 	{
 		uint8_t* p = (uint8_t*)&be;
 		uint32_t r = p[0];
@@ -134,13 +134,13 @@ namespace
 
 		return r;
 	}
-
-	uint16_t ntohs(uint16_t be)
+	
+	uint16_t dff_ntohs(uint16_t be)
 	{
 		uint8_t* p = (uint8_t*)&be;
 		return (p[0] << 8) | p[1];
 	}
-
+	
 }
 
 struct DFFChunkHeader
@@ -156,7 +156,7 @@ struct DFFChunk
 
 	void setupHeader()
 	{
-		header.ckID = ntohl(header.ckID);
+		header.ckID = dff_ntohl(header.ckID);
 		header.ckDataSize = ntohll(header.ckDataSize);
 	}
 
@@ -175,7 +175,7 @@ struct FVERChunk : public DFFChunk
 
 	void setupData()
 	{
-		data.version = ntohl(data.version);
+		data.version = dff_ntohl(data.version);
 	}
 };
 
@@ -188,7 +188,7 @@ struct FSChunk : public DFFChunk
 
 	void setupData()
 	{
-		data.sampleRate = ntohl(data.sampleRate);
+		data.sampleRate = dff_ntohl(data.sampleRate);
 	}
 };
 
@@ -203,7 +203,7 @@ struct CHNLChunk : public DFFChunk
 
 	void setupData()
 	{
-		data.numChannels = ntohs(data.numChannels);
+		data.numChannels = dff_ntohs(data.numChannels);
 	}
 };
 
@@ -219,7 +219,7 @@ struct CMPRChunk : public DFFChunk
 
 	void setupData()
 	{
-		data.compressionType = ntohl(data.compressionType);
+		data.compressionType = dff_ntohl(data.compressionType);
 	}
 };
 
@@ -235,8 +235,8 @@ struct ABSSChunk : public DFFChunk
 
 	void setupData()
 	{
-		data.hours = ntohs(data.hours);
-		data.samples = ntohl(data.samples);
+		data.hours = dff_ntohs(data.hours);
+		data.samples = dff_ntohl(data.samples);
 	}
 };
 
@@ -249,7 +249,7 @@ struct LSCOChunk : public DFFChunk
 
 	void setupData()
 	{
-		data.lsConfig = ntohs(data.lsConfig);
+		data.lsConfig = dff_ntohs(data.lsConfig);
 	}
 };
 
@@ -268,7 +268,7 @@ struct PROPChunk : public DFFChunk
 
 	void setupData()
 	{
-		data.propType = ntohl(data.propType);
+		data.propType = dff_ntohl(data.propType);
 	}
 };
 
@@ -287,8 +287,8 @@ struct FRTEChunk : public DFFChunk
 
 	void setupData()
 	{
-		data.numFrames = ntohl(data.numFrames);
-		data.frameRate = ntohs(data.frameRate);
+		data.numFrames = dff_ntohl(data.numFrames);
+		data.frameRate = dff_ntohs(data.frameRate);
 	}
 };
 
@@ -306,7 +306,7 @@ struct DSTCChunk : public DFFChunk
 
 	void setupData()
 	{
-		data.crc = ntohl(data.crc);
+		data.crc = dff_ntohl(data.crc);
 	}
 };
 
@@ -344,7 +344,7 @@ struct DSTFrameIndex
 	void setupData()
 	{
 		data.offset = ntohll(data.offset);
-		data.length = ntohl(data.length);
+		data.length = dff_ntohl(data.length);
 	}
 };
 
@@ -361,7 +361,7 @@ struct COMTChunk : public DFFChunk
 
 	void setupData()
 	{
-		data.numComments = ntohs(data.numComments);
+		data.numComments = dff_ntohs(data.numComments);
 	}
 };
 
@@ -383,10 +383,10 @@ struct Comment
 
 	void setupData()
 	{
-		data.timeStampYear = ntohs(data.timeStampYear);
-		data.cmtType = ntohs(data.cmtType);
-		data.cmtRef = ntohs(data.cmtRef);
-		data.count = ntohl(data.count);
+		data.timeStampYear = dff_ntohs(data.timeStampYear);
+		data.cmtType = dff_ntohs(data.cmtType);
+		data.cmtRef = dff_ntohs(data.cmtRef);
+		data.count = dff_ntohl(data.count);
 	}
 };
 
@@ -418,13 +418,13 @@ struct MARKChunk : public DFFChunk
 
 	void setupData()
 	{
-		data.hours = ntohs(data.hours);
-		data.samples = ntohl(data.samples);
-		data.offset = ntohl(data.offset);
-		data.markType = ntohs(data.markType);
-		data.markChannel = ntohs(data.markChannel);
-		data.trackFlags = ntohs(data.trackFlags);
-		data.count = ntohl(data.count);
+		data.hours = dff_ntohs(data.hours);
+		data.samples = dff_ntohl(data.samples);
+		data.offset = dff_ntohl(data.offset);
+		data.markType = dff_ntohs(data.markType);
+		data.markChannel = dff_ntohs(data.markChannel);
+		data.trackFlags = dff_ntohs(data.trackFlags);
+		data.count = dff_ntohl(data.count);
 	}
 };
 
@@ -439,7 +439,7 @@ struct DIARChunk : public DFFChunk
 
 	void setupData()
 	{
-		data.count = ntohl(data.count);
+		data.count = dff_ntohl(data.count);
 	}
 };
 
@@ -454,7 +454,7 @@ struct DITIChunk : public DFFChunk
 
 	void setupData()
 	{
-		data.count = ntohl(data.count);
+		data.count = dff_ntohl(data.count);
 	}
 };
 
@@ -479,7 +479,7 @@ struct MANFChunk : public DFFChunk
 
 	void setupData()
 	{
-		data.manID = ntohl(data.manID);
+		data.manID = dff_ntohl(data.manID);
 	}
 };
 
@@ -501,7 +501,7 @@ struct FRM8Chunk : public DFFChunk
 
 	void setupData()
 	{
-		data.formType = ntohl(data.formType);
+		data.formType = dff_ntohl(data.formType);
 	}
 };
 

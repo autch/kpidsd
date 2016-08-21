@@ -1,44 +1,37 @@
 #pragma once
 
+#include "CAbstractFile.h"
+
 class CLargeFile
 {
 protected:
-	HANDLE			hFile;
-	LARGE_INTEGER	liFileSize;
+	CAbstractFile*	hFile;
 
 public:
 	CLargeFile();
 	virtual ~CLargeFile();
 
-	virtual BOOL Open(LPCSTR szFileName);
+	virtual BOOL Open(CAbstractFile* file) = 0;
 	virtual void Close();
 
 	virtual void Reset() { Seek(0, NULL, FILE_BEGIN); }
 
-	HANDLE File() const { return hFile; }
-	uint64_t FileSize() const { return liFileSize.QuadPart; }
+	uint64_t FileSize() const { return hFile->FileSize(); }
 
-	BOOL Seek(uint64_t distance, uint64_t* newPos, DWORD moveMethod) const
+	BOOL Seek(int64_t distance, uint64_t* newPos, DWORD moveMethod) const
 	{
-		LARGE_INTEGER lidist, newpos = { 0 };
-		BOOL r;
-
-		lidist.QuadPart = (long long)distance;
-		r = ::SetFilePointerEx(hFile, lidist, &newpos, moveMethod);
-		if (newPos != NULL) *newPos = newpos.QuadPart;
-		return r;
+		return hFile->Seek(distance, newPos, moveMethod);
 	}
 	uint64_t Tell() const
 	{
-		LARGE_INTEGER zero = { 0 };
-
-		::SetFilePointerEx(hFile, zero, &zero, FILE_CURRENT);
-		return (uint64_t)zero.QuadPart;
+		uint64_t newPos = 0;
+		hFile->Seek(0, &newPos, FILE_CURRENT);
+		return newPos;
 	}
 
 	BOOL Read(LPVOID buffer, DWORD bytesToRead, LPDWORD bytesRead) const
 	{
-		return ::ReadFile(hFile, buffer, bytesToRead, bytesRead, NULL);
+		return hFile->Read(buffer, bytesToRead, bytesRead);
 	}
 
 	uint64_t ntohllX(uint64_t be) const

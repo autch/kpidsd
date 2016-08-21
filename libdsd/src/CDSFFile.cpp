@@ -15,10 +15,9 @@ void CDSFFile::Close()
 	CLargeFile::Close();
 }
 
-BOOL CDSFFile::Open(LPCSTR szFileName)
+BOOL CDSFFile::Open(CAbstractFile* file)
 {
-	if (!CLargeFile::Open(szFileName))
-		return FALSE;
+	hFile = file;
 
 	if (!checkHeader())
 	{
@@ -47,7 +46,7 @@ BOOL CDSFFile::checkHeader()
 			return FALSE;
 		if (header.size != DSF_HEADER_SIZE)
 			return FALSE;
-		if (header.file_size != liFileSize.QuadPart)
+		if (header.file_size != FileSize())
 			return FALSE;
 	}
 	{

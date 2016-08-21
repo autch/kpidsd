@@ -16,7 +16,7 @@ public:
 	CWSDFile();
 	~CWSDFile();
 
-	BOOL Open(LPCSTR szFileName);
+	BOOL Open(CAbstractFile* file);
 	void Close();
 
 	void Reset();

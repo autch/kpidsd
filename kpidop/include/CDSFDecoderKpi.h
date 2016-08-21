@@ -1,21 +1,24 @@
 
 #pragma once
 
-#include "CAbstractKpi.h"
 #include "CDSFFile.h"
 #include "dsf_types.h"
+#include "CAbstractFile.h"
+#include "kpi_impl.h"
+#include "CAbstractKpi.h"
 
 class CDSFDecoderKpi : public CAbstractKpi
 {
 private:
+	CAbstractFile* pFile;
 	CDSFFile file;
+	KPI_MEDIAINFO mInfo;
 
 	BYTE* srcBuffer;
 	DWORD srcBufferSize;
 	
 	uint64_t samplesRendered;
 
-	SOUNDINFO soundinfo;
 	BYTE last_marker;
 
 	DWORD decodeLSBFirst(PBYTE buffer, DWORD dwSize);
@@ -31,11 +34,11 @@ public:
 	CDSFDecoderKpi();
 	virtual ~CDSFDecoderKpi();
 
-	BOOL Open(LPSTR szFileName, SOUNDINFO* pInfo);
+	DWORD Open(const KPI_MEDIAINFO* pRequest, IKpiFile* file, IKpiFolder* folder);
+	DWORD WINAPI Select(DWORD dwNumber, const KPI_MEDIAINFO **ppMediaInfo, IKpiTagInfo *pTagInfo);
 	void Close();
-	DWORD SetPosition(DWORD dwPosition);
-	DWORD Render(BYTE* buffer, DWORD dwSize);
+	UINT64 WINAPI Seek(UINT64 qwPosSample, DWORD dwFlag);
+	DWORD  WINAPI Render(BYTE *pBuffer, DWORD dwSizeSample);
+	DWORD  WINAPI UpdateConfig(void *pvReserved) { return 0; }
 	void Reset();
-
-	static BOOL GetTagInfo(const char *cszFileName, IKmpTagInfo *pInfo);
 };

@@ -13,14 +13,11 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="kpi sdk">
+      <UniqueIdentifier>{7049bc8f-23da-4b76-8419-7296a68c9f95}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\kmp_pi.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="include\kpi.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="include\CAbstractKpi.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -30,16 +27,10 @@
     <ClInclude Include="include\targetver.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="include\kpi_version.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="include\CDSFDecoderKpi.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="include\dop.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="include\DSDDecoderFactory.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="include\CWSDDecoderKpi.h">
@@ -48,16 +39,29 @@
     <ClInclude Include="include\CDFFDecoderKpi.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta22\SDK\kpi.h">
+      <Filter>kpi sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta22\SDK\kpi_impl.h">
+      <Filter>kpi sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="include\KpiDopDecoderModule.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="include\CKpiFileAdapter.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta22\SDK\kmp_pi.h">
+      <Filter>kpi sdk</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="kpidop.def">
       <Filter>ソース ファイル</Filter>
     </None>
+    <None Include="KMPPlugin.props" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\kpi.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="src\dllexports.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -70,13 +74,16 @@
     <ClCompile Include="src\CDSFDecoderKpi.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="src\DSDDecoderFactory.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="src\CWSDDecoderKpi.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="src\CDFFDecoderKpi.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\usr\local\kbmed280_beta22\SDK\kpi.cpp">
+      <Filter>kpi sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="src\KpiDopDecoderModule.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

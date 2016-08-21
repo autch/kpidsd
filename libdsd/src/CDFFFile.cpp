@@ -33,13 +33,12 @@ bool CDFFFile::readChunkHeader(DFFChunkHeader& header, ChunkStep& step)
 	return true;
 }
 
-BOOL CDFFFile::Open(LPCSTR cszFileName)
+BOOL CDFFFile::Open(CAbstractFile* file)
 {
-	if (!CLargeFile::Open(cszFileName))
-		return FALSE;
-
 	ChunkStep step;
 	DFFChunkHeader hdr;
+
+	hFile = file;
 
 	while (readChunkHeader(hdr, step))
 	{

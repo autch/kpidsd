@@ -2,10 +2,12 @@
 #include "CWSDDecoderKpi.h"
 #include "dop.h"
 #include "kpi.h"
+#include "kmp_pi.h"
 #include <stdlib.h>
 #include <string.h>
+#include "CKpiFileAdapter.h"
 
-CWSDDecoderKpi::CWSDDecoderKpi() : file(), srcBuffer(NULL)
+CWSDDecoderKpi::CWSDDecoderKpi() : file(), pFile(NULL), srcBuffer(NULL)
 {
 
 }
@@ -18,6 +20,11 @@ CWSDDecoderKpi::~CWSDDecoderKpi()
 void CWSDDecoderKpi::Close()
 {
 	file.Close();
+	if (pFile != NULL) {
+		((CKpiFileAdapter*)pFile)->GetKpiFile()->Release();
+		delete pFile;
+		pFile = NULL;
+	}
 	if (srcBuffer != NULL)
 	{
 		delete[] srcBuffer;
@@ -31,83 +38,88 @@ void CWSDDecoderKpi::Reset()
 	last_marker = DOP_MARKER1;
 }
 
-BOOL CWSDDecoderKpi::Open(LPSTR szFileName, SOUNDINFO* pInfo)
+DWORD CWSDDecoderKpi::Open(const KPI_MEDIAINFO* pRequest, IKpiFile* kpiFile, IKpiFolder* folder)
 {
-	if (!file.Open(szFileName))
-		return FALSE;
+	CKpiFileAdapter* pFile = new CKpiFileAdapter(kpiFile);
+	if (!file.Open(pFile)) {
+		delete pFile;
+		return 0;
+	}
 
 	uint32_t dsd_fs = file.DataSpec()->samplingFrequency;
 	uint32_t channels = file.DataSpec()->channels;
 
-	soundinfo.dwChannels = channels;
+	ZeroMemory(&mInfo, sizeof(KPI_MEDIAINFO));
+	mInfo.cb = sizeof(KPI_MEDIAINFO);
+	mInfo.dwNumber = 1;
+	mInfo.dwCount = 1;
+	mInfo.dwFormatType = KPI_MEDIAINFO::FORMAT_DOP;
+	mInfo.dwChannels = channels;
 
 	switch (dsd_fs) {
 	case DSD_FREQ_64FS:
-		soundinfo.dwSamplesPerSec = DOP_FREQ_64FS;
+		mInfo.dwSampleRate = DOP_FREQ_64FS;
 		break;
 	case DSD_FREQ_128FS:
-		soundinfo.dwSamplesPerSec = DOP_FREQ_128FS;
+		mInfo.dwSampleRate = DOP_FREQ_128FS;
 		break;
 	default:
 		// 256FS ‚Æ‚©‚Í‚±‚Á‚¿‚ð’Ê‚·
 		if (dsd_fs % 44100 == 0)
-			soundinfo.dwSamplesPerSec = dsd_fs / 16;
+			mInfo.dwSampleRate = dsd_fs / 16;
 		else
 			goto fail_cleanup;
 	}
-	soundinfo.dwReserved1 = soundinfo.dwReserved2 = 0;
-	soundinfo.dwSeekable = 1;
+	mInfo.dwSeekableFlags = KPI_MEDIAINFO::SEEK_FLAGS_SAMPLE | KPI_MEDIAINFO::SEEK_FLAGS_ACCURATE | KPI_MEDIAINFO::SEEK_FLAGS_ROUGH;
 
-	pInfo->dwBitsPerSample = GetMyProfileInt("kpidop", "BitsPerDoPFrame", pInfo->dwBitsPerSample);
+	//pInfo->dwBitsPerSample = GetMyProfileInt("kpidop", "BitsPerDoPFrame", pInfo->dwBitsPerSample);
 
-	switch (pInfo->dwBitsPerSample)
-	{
-	case 0:
-	case 24:
-		soundinfo.dwBitsPerSample = 24;
-		soundinfo.dwUnitRender = 3 * channels * SAMPLES_PER_BLOCK / 2;
-		break;
-	case 32:
-	default:
-		soundinfo.dwBitsPerSample = 32;
-		soundinfo.dwUnitRender = 4 * channels * SAMPLES_PER_BLOCK / 2;
-		break;
+	if (pRequest != NULL) {
+		switch (pRequest->nBitsPerSample)
+		{
+		case 0:
+		case 24:
+			mInfo.nBitsPerSample = 24;
+			mInfo.dwUnitSample = SAMPLES_PER_BLOCK / 2;
+			break;
+		case 32:
+		default:
+			mInfo.nBitsPerSample = 32;
+			mInfo.dwUnitSample = SAMPLES_PER_BLOCK / 2;
+			break;
+		}
 	}
 
 	{
 		uint64_t samples = file.FileSize() - file.Header()->dataOffset;
 		
 		samples <<= 3;
-		samples *= 1000;
+		samples *= 1000 * 10000;
 		samples /= dsd_fs;
 		samples /= channels;
 
-		soundinfo.dwLength = (DWORD)samples;
+		mInfo.qwLength = samples;
 	}
-
-	memcpy(pInfo, &soundinfo, sizeof soundinfo);
 
 	srcBufferSize = SAMPLES_PER_BLOCK * channels;
 	srcBuffer = new BYTE[srcBufferSize];
 
 	Reset();
+	kpiFile->AddRef();
+	this->pFile = pFile;
 
-	return TRUE;
+	return mInfo.dwCount;
 
 fail_cleanup:
 	Close();
-	return FALSE;
+	return 0;
 }
 
-DWORD CWSDDecoderKpi::SetPosition(DWORD dwPos)
+UINT64 WINAPI CWSDDecoderKpi::Seek(UINT64 qwPosSample, DWORD dwFlag)
 {
-	if (file.File() == INVALID_HANDLE_VALUE)
-		return 0;
-
-	uint64_t bytePos = dwPos;
-	bytePos *= file.DataSpec()->samplingFrequency;
-	bytePos *= file.DataSpec()->channels;
-	bytePos /= 1000;
+	uint64_t bytePos = qwPosSample;
+	bytePos *= 16;
+	bytePos *= mInfo.dwChannels;
 	bytePos >>= 3;
 
 	BYTE marker = last_marker;
@@ -117,20 +129,20 @@ DWORD CWSDDecoderKpi::SetPosition(DWORD dwPos)
 
 	last_marker = marker;
 
-	// bytePos ‚©‚ç‹‚ß‚½ƒ~ƒŠ•bˆÊ’u‚ÍAƒ‚ƒmƒ‰ƒ‹ 64FS ‚É‚¨‚¢‚Ä‚à dwPos ‚Æ 1ms –¢–ž‚ÌŒë·‚Å‚µ‚©–³‚¢
-	return dwPos;
+	return qwPosSample;
 }
 
-DWORD CWSDDecoderKpi::Render(BYTE* buffer, DWORD dwSize)
+DWORD CWSDDecoderKpi::Render(BYTE* buffer, DWORD dwSizeSample)
 {
 	DWORD dwBytesRead = 0;
+	DWORD dwSize = dwSizeSample * (mInfo.dwChannels * (mInfo.nBitsPerSample / 8));
 	PBYTE d = buffer, de = buffer + dwSize;
 	BYTE marker = last_marker;
 	BYTE frame[4] = { 0, 0, 0, 0 };
 	DWORD dwBytesToWrite, dwFrameOffset;
 	int channels = file.DataSpec()->channels;
 
-	if (soundinfo.dwBitsPerSample == 24)
+	if (mInfo.nBitsPerSample == 24)
 	{
 		dwBytesToWrite = 3;
 		dwFrameOffset = 1;
@@ -167,10 +179,10 @@ DWORD CWSDDecoderKpi::Render(BYTE* buffer, DWORD dwSize)
 
 	last_marker = marker;
 
-	return d - buffer;
+	return (d - buffer) / mInfo.dwChannels / (mInfo.nBitsPerSample / 8);
 }
 
-void trim(const char* szName, IKmpTagInfo* pInfo, uint8_t* buf, size_t size)
+void trim(const wchar_t* szName, IKpiTagInfo* pInfo, uint8_t* buf, size_t size)
 {
 	char* tmp = new char[size + 1];
 
@@ -187,25 +199,26 @@ void trim(const char* szName, IKmpTagInfo* pInfo, uint8_t* buf, size_t size)
 	else
 		*(pe + 1) = '\0';
 
-	pInfo->SetValueA(szName, tmp);
+	pInfo->wSetValueA(szName, -1, tmp, -1);
 
 	delete[] tmp;
 }
 
-BOOL CWSDDecoderKpi::GetTagInfo(const char *cszFileName, IKmpTagInfo *pInfo)
+DWORD CWSDDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, IKpiTagInfo* pTagInfo)
 {
-	CWSDFile file;
+	if (dwNumber != 1)
+		return 0;
 
-	if (!file.Open(cszFileName))
-		return FALSE;
+	if (ppMediaInfo != NULL)
+		*ppMediaInfo = &mInfo;
+	if (pTagInfo != NULL) {
+		trim(SZ_KMP_NAME_TITLE, pTagInfo, file.Text()->title, sizeof file.Text()->title);
+		trim(SZ_KMP_NAME_ARTIST, pTagInfo, file.Text()->artist, sizeof file.Text()->artist);
+		trim(SZ_KMP_NAME_ALBUM, pTagInfo, file.Text()->album, sizeof file.Text()->album);
+		trim(SZ_KMP_NAME_GENRE, pTagInfo, file.Text()->genre, sizeof file.Text()->genre);
+		trim(SZ_KMP_NAME_COMMENT, pTagInfo, file.Text()->comment, sizeof file.Text()->comment);
+		trim(SZ_KMP_NAME_DATE, pTagInfo, file.Text()->dateAndTime, sizeof file.Text()->dateAndTime);
+	}
 
-	trim(SZ_KMP_TAGINFO_NAME_TITLE, pInfo, file.Text()->title, sizeof file.Text()->title);
-	trim(SZ_KMP_TAGINFO_NAME_ARTIST, pInfo, file.Text()->artist, sizeof file.Text()->artist);
-	trim(SZ_KMP_TAGINFO_NAME_ALBUM, pInfo, file.Text()->album, sizeof file.Text()->album);
-	trim(SZ_KMP_TAGINFO_NAME_GENRE, pInfo, file.Text()->genre, sizeof file.Text()->genre);
-	trim(SZ_KMP_TAGINFO_NAME_COMMENT, pInfo, file.Text()->comment, sizeof file.Text()->comment);
-	trim(SZ_KMP_TAGINFO_NAME_DATE, pInfo, file.Text()->dateAndTime, sizeof file.Text()->dateAndTime);
-
-	file.Close();
-	return TRUE;
+	return 1;
 }

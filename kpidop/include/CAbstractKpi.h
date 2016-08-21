@@ -1,18 +1,12 @@
 
 #pragma once
 
-#include "kmp_pi.h"
+#include "kpi.h"
+#include "kpi_impl.h"
 
-class CAbstractKpi
+class CAbstractKpi: public KbKpiDecoderImpl
 {
 public:
-	virtual BOOL Open(LPSTR szFileNmae, SOUNDINFO* pInfo) = 0;
+	virtual DWORD Open(const KPI_MEDIAINFO* pRequest, IKpiFile* file, IKpiFolder* folder) = 0; // returns how many songs in that file
 	virtual void Close() = 0;
-	virtual DWORD Render(BYTE* buffer, DWORD dwSize) = 0;
-	virtual DWORD SetPosition(DWORD dwPos) = 0;
-
-	static BOOL GetTagInfo(const char *cszFileName, IKmpTagInfo *pInfo)
-	{
-		return FALSE;
-	}
 };

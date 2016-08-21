@@ -33,6 +33,6 @@ public:
 	FRM8Chunk& FRM8() { return frm8; }
 
 	void Reset() { Seek(frm8.dsd.OffsetToData(), NULL, FILE_BEGIN); }
-	BOOL Open(LPCSTR cszFileName);
+	BOOL Open(CAbstractFile* file);
 	void Close();
 };

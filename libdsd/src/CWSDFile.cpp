@@ -16,10 +16,9 @@ void CWSDFile::Close()
 	CLargeFile::Close();
 }
 
-BOOL CWSDFile::Open(LPCSTR szFileName)
+BOOL CWSDFile::Open(CAbstractFile* file)
 {
-	if (!CLargeFile::Open(szFileName))
-		return FALSE;
+	hFile = file;
 
 	if (!checkHeader())
 	{
@@ -55,10 +54,10 @@ BOOL CWSDFile::checkHeader()
 	header.textOffset = ntohl(header.textOffset);
 	header.dataOffset = ntohl(header.dataOffset);
 
-	if (header.textOffset > liFileSize.QuadPart 
+	if (header.textOffset > FileSize()
 		|| header.textOffset < sizeof header + sizeof data_spec)
 		return FALSE;
-	if (header.dataOffset >= liFileSize.QuadPart)
+	if (header.dataOffset >= FileSize())
 		return FALSE;
 
 	if (Read(&data_spec, sizeof data_spec, &dwBytesRead) == FALSE)
