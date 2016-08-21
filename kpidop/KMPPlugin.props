@@ -2,7 +2,7 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros">
-    <KMPPluginsPath>C:\usr\local\kbmed280_beta22\x64\Plugins</KMPPluginsPath>
+    <KMPPluginsPath>C:\usr\local\kbmed280_beta23\x64\Plugins</KMPPluginsPath>
   </PropertyGroup>
   <PropertyGroup />
   <ItemDefinitionGroup />

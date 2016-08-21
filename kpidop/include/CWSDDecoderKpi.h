@@ -1,9 +1,7 @@
-
 #pragma once
 
 #include "CWSDFile.h"
 #include "wsd_types.h"
-#include "kpi_impl.h"
 #include "CAbstractFile.h"
 #include "CAbstractKpi.h"
 
@@ -26,7 +24,7 @@ public:
 	virtual ~CWSDDecoderKpi();
 
 	DWORD Open(const KPI_MEDIAINFO* pRequest, IKpiFile* file, IKpiFolder* folder);
-	DWORD WINAPI Select(DWORD dwNumber, const KPI_MEDIAINFO **ppMediaInfo, IKpiTagInfo *pTagInfo);
+	DWORD WINAPI Select(DWORD dwNumber, const KPI_MEDIAINFO **ppMediaInfo, IKpiTagInfo *pTagInfo, DWORD dwTagGetFlags);
 	void Close();
 	UINT64 WINAPI Seek(UINT64 qwPosSample, DWORD dwFlag);
 	DWORD  WINAPI Render(BYTE *pBuffer, DWORD dwSizeSample);

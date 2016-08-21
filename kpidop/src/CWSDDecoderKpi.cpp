@@ -1,10 +1,10 @@
 #include "stdafx.h"
-#include "CWSDDecoderKpi.h"
-#include "dop.h"
-#include "kpi.h"
-#include "kmp_pi.h"
+
 #include <stdlib.h>
 #include <string.h>
+
+#include "CWSDDecoderKpi.h"
+#include "dop.h"
 #include "CKpiFileAdapter.h"
 
 CWSDDecoderKpi::CWSDDecoderKpi() : file(), pFile(NULL), srcBuffer(NULL)
@@ -204,7 +204,7 @@ void trim(const wchar_t* szName, IKpiTagInfo* pInfo, uint8_t* buf, size_t size)
 	delete[] tmp;
 }
 
-DWORD CWSDDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, IKpiTagInfo* pTagInfo)
+DWORD CWSDDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, IKpiTagInfo* pTagInfo, DWORD dwTagGetFlags)
 {
 	if (dwNumber != 1)
 		return 0;
@@ -212,6 +212,9 @@ DWORD CWSDDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, 
 	if (ppMediaInfo != NULL)
 		*ppMediaInfo = &mInfo;
 	if (pTagInfo != NULL) {
+		// do not use builtin tag parser
+		pTagInfo->GetTagInfo(NULL, NULL, KPI_TAGTYPE_NONE, 0);
+
 		trim(SZ_KMP_NAME_TITLE, pTagInfo, file.Text()->title, sizeof file.Text()->title);
 		trim(SZ_KMP_NAME_ARTIST, pTagInfo, file.Text()->artist, sizeof file.Text()->artist);
 		trim(SZ_KMP_NAME_ALBUM, pTagInfo, file.Text()->album, sizeof file.Text()->album);

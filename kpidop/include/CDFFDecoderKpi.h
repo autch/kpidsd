@@ -1,4 +1,5 @@
-#include "kpi_impl.h"
+#pragma once
+
 #include "CDFFFile.h"
 #include "CAbstractFile.h"
 #include "CAbstractKpi.h"
@@ -22,7 +23,7 @@ public:
 	virtual ~CDFFDecoderKpi();
 
 	DWORD Open(const KPI_MEDIAINFO* pRequest, IKpiFile* file, IKpiFolder* folder);
-	DWORD WINAPI Select(DWORD dwNumber, const KPI_MEDIAINFO **ppMediaInfo, IKpiTagInfo *pTagInfo);
+	DWORD WINAPI Select(DWORD dwNumber, const KPI_MEDIAINFO **ppMediaInfo, IKpiTagInfo *pTagInfo, DWORD dwTagGetFlags);
 
 	void Close();
 	UINT64 WINAPI Seek(UINT64 qwPosSample, DWORD dwFlag);

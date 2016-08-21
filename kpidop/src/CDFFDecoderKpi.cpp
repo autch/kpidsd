@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#include "CDFFDecoderKpi.h"
+
 #include "dop.h"
-#include "kpi.h"
-#include "kmp_pi.h"
+
+#include "CDFFDecoderKpi.h"
 #include "CKpiFileAdapter.h"
 
 CDFFDecoderKpi::CDFFDecoderKpi() : file(), pFile(NULL), srcBuffer(NULL)
@@ -14,7 +14,7 @@ CDFFDecoderKpi::~CDFFDecoderKpi()
 	Close();
 }
 
-DWORD CDFFDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, IKpiTagInfo* pTagInfo)
+DWORD CDFFDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, IKpiTagInfo* pTagInfo, DWORD dwTagGetFlags)
 {
 	if (dwNumber != 1)
 		return 0;
@@ -22,6 +22,9 @@ DWORD CDFFDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, 
 	if (ppMediaInfo != NULL)
 		*ppMediaInfo = &mInfo;
 	if (pTagInfo != NULL) {
+		// do not use builtin tag parser
+		pTagInfo->GetTagInfo(NULL, NULL, KPI_TAGTYPE_NONE, 0);
+
 		if (file.FRM8().diin.diar.artistText.length() > 0)
 			pTagInfo->wSetValueA(SZ_KMP_NAME_ARTIST, -1, file.FRM8().diin.diar.artistText.c_str(), -1);
 		if (file.FRM8().diin.diti.titleText.length() > 0)

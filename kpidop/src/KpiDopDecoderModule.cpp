@@ -1,4 +1,5 @@
 #include "stdafx.h"
+
 #include "KpiDopDecoderModule.h"
 #include "CAbstractKpi.h"
 #include "CDFFDecoderKpi.h"
@@ -71,6 +72,7 @@ DWORD KpiDopDecoderModule::Open(const KPI_MEDIAINFO * cpRequest, IKpiFile * pFil
 	}
 	else {
 		// !?
+		*ppDecoder = NULL;
 		return 0;
 	}
 	DWORD dwCount = pDecoder->Open(cpRequest, pFile, pFolder);

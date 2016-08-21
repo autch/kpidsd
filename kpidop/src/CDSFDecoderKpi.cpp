@@ -1,8 +1,11 @@
 #include "stdafx.h"
-#include "CDSFDecoderKpi.h"
+
+#include <stdlib.h>
+
 #include "dop.h"
-#include "kpi.h"
+#include "CDSFDecoderKpi.h"
 #include "CKpiFileAdapter.h"
+#include "CID3V2.h"
 
 CDSFDecoderKpi::CDSFDecoderKpi() : file(), pFile(NULL), srcBuffer(NULL)
 {
@@ -256,14 +259,9 @@ DWORD CDSFDecoderKpi::decodeMSBFirst(PBYTE buffer, DWORD dwSize)
 	return d - buffer;
 }
 
-#include "CID3V2.h"
-#include "kmp_pi.h"
-#include <stdlib.h>
-
 bool setID3V2AsKMPTag(CID3V2Tag& tag, ID3V2_ID frameId, IKpiTagInfo* pInfo, const wchar_t* szKMPTagName);
 
-
-DWORD CDSFDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, IKpiTagInfo* pTagInfo)
+DWORD CDSFDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, IKpiTagInfo* pTagInfo, DWORD dwTagGetFlags)
 {
 	if (dwNumber != 1)
 		return 0;
@@ -278,6 +276,9 @@ DWORD CDSFDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, 
 		if (!file.Seek(file.Header()->id3v2_pointer, NULL, FILE_BEGIN))
 			return 1;
 
+		// DSF has ID3V2 tag at end of file, do not use builtin tag parser
+		pTagInfo->GetTagInfo(NULL, NULL, KPI_TAGTYPE_NONE, 0);
+
 		DWORD dwTagSize = (DWORD)(file.FileSize() - file.Header()->id3v2_pointer);
 		BYTE* buf = new BYTE[dwTagSize];
 
@@ -290,7 +291,6 @@ DWORD CDSFDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, 
 			return 1;
 		}
 
-		// file はフォーマットチェックとしてしか使わない
 		{
 			CID3V2Tag tag;
 

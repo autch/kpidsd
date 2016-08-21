@@ -73,25 +73,25 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <TargetExt>.kpi</TargetExt>
-    <IncludePath>C:\usr\local\kbmed280_beta22\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\usr\local\kbmed280_beta23\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <TargetExt>.kpi</TargetExt>
-    <IncludePath>C:\usr\local\kbmed280_beta22\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\usr\local\kbmed280_beta23\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.kpi</TargetExt>
-    <IncludePath>C:\usr\local\kbmed280_beta22\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\usr\local\kbmed280_beta23\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.kpi</TargetExt>
-    <IncludePath>C:\usr\local\kbmed280_beta22\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\usr\local\kbmed280_beta23\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -219,9 +219,10 @@ copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)"
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta22\SDK\kmp_pi.h" />
-    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta22\SDK\kpi.h" />
-    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta22\SDK\kpi_impl.h" />
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta23\SDK\kmp_pi.h" />
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta23\SDK\kpi.h" />
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta23\SDK\kpi_decoder.h" />
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta23\SDK\kpi_impl.h" />
     <ClInclude Include="include\CAbstractKpi.h" />
     <ClInclude Include="include\CDFFDecoderKpi.h" />
     <ClInclude Include="include\CDSFDecoderKpi.h" />
@@ -237,7 +238,6 @@ copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)"
     <None Include="kpidop.def" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\..\usr\local\kbmed280_beta22\SDK\kpi.cpp" />
     <ClCompile Include="src\CDFFDecoderKpi.cpp" />
     <ClCompile Include="src\CDSFDecoderKpi.cpp" />
     <ClCompile Include="src\CWSDDecoderKpi.cpp" />

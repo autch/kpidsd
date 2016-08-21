@@ -16,5 +16,16 @@
 #include <ctype.h>
 #include <stdint.h>
 
+#ifdef _DEBUG
+#define LEAK_CHECK
+#endif
+#ifdef LEAK_CHECK
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+#define new new(_NORMAL_BLOCK, __FILE__, __LINE__)
+#endif
 
 // TODO: プログラムに必要な追加ヘッダーをここで参照してください。
+#include "kpi.h"
+#include "kpi_decoder.h"
+#include "kmp_pi.h"

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "kpi.h"
 #include "kpi_impl.h"
 
 class KpiDopDecoderModule: public KbKpiDecoderModuleImpl
