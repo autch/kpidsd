@@ -1,10 +1,11 @@
 kpidop.kpi
 ==========
 
-DSD (Direct Stream Digital) 音源を DSD over PCM (DoP) 方式で再生するため
-のKbMedia Player プラグインです。対応する拡張子は dsf, dff, wsd です。
+DSD (Direct Stream Digital) 音源を DSD Audio over PCM Frames (DoP) 方式
+で再生するための KbMedia Player プラグインです。対応する拡張子は dsf, 
+dff, wsd です。
 
-KbMedia Player 2.51beta14 以降が必要です。
+KbMedia Player 2.80beta23 以降が必要です。
 
 KbMedia Player のプラグイン仕様は PCM を前提として作られているため、DSD
 を再生する上で制限事項がありますので、このファイルは最後まで目を通してく
@@ -42,9 +43,11 @@ KbMedia Player の構成
 デバイスによっては 24bit INT での出力が必要になるかもしれません。次の
 「デバイス設定」をご覧ください。
 
-ASIO/WASAPI サポートが必要です。waveOut/DirectSound では動作しません。
+ASIO/WASAPI サポートが必要です。通常 waveOut/DirectSound では動作しませ
+んが、VMware のゲストとして動かす場合は waveOut や DirectSound でないと
+動作しないことがあります。
 
-開発及び動作確認は 2.51beta14, 2.51beta19 で行っています。
+開発及び動作確認は 2.80beta22, 2.80beta23a で行っています。
 
 
 デバイス設定
@@ -56,23 +59,9 @@ ASIO/WASAPI サポートが必要です。waveOut/DirectSound では動作しません。
 ・デバイスインタフェース：ASIO か WASAPI を選択。両方使えるデバイスもあ
 るし、どちらかでないと使えないデバイスもあるらしい。
 
-・デバイスへの出力ビット数：32bit INT と 24bit INT だけをチェック、これ
-ら以外は外す。
-
-・プラグインへの出力ビット数要求：
-（2.51beta14 まで）24bit INT か 32bit INT を選択。どちらが使えるかはデバ
-イスによって異なる。プラグインは両方に対応する。
-（2.51beta15 以降）kpidop.kpi と同じディレクトリに kpidop.ini ファイルを
-作り、以下の内容を書きます。このファイルを置かないと 32bit INT で出力し
-ます。
-
-----
-[kpidop]
-BitsPerDOPFrame=24または32
-----
-
-デバイスによって動作する組み合わせは変わるようですので、試行錯誤する必要
-があるかもしれません。
+・デバイスへの出力ビット数：32bit INT か 24bit INT をチェック、デバイス
+によって動作する組み合わせは変わるようですので、試行錯誤する必要があるか
+もしれません。
 
 ASIO4ALL 経由では使えないようです。ASIO サポートのないデバイスでは 
 WASAPI をおすすめします。
@@ -81,20 +70,15 @@ WASAPI をおすすめします。
 サポートしない機能
 ------------------
 
-以下の機能はオフにしてください。これらはプラグイン出力を加工するため、デ
-バイスが DoP フレームとして認識しなくなります。
+以下の機能は PCM を前提としているため自動的にオフまたは無効になります。
 
-・ボリューム→100% に戻す
+・ボリューム→つねに 100% 固定
 ・エコー
 ・ピッチスケール・テンポチェンジ
 ・クロスフェード
 ・リプレイゲイン
-
-フェードアウトはそれを実行した瞬間から DoP フレームでなくなるため、ノイ
-ズになったり音が出なくなります。
-
-スペアナは DoP ストリームを無理やり分析しようとするため、常に低域がちょ
-っと動くだけになります。
+・フェードアウト
+・スペアナ
 
 このプラグインで再生中のとき、「曲の長さ」の PCM パラメータは
   176400Hz（2.8224MHz のとき）または 352800Hz（5.6448MHz のとき）
@@ -116,7 +100,8 @@ DSDIFF フォーマットにおける DST (Direct Stream Transfer) コーデックには
 対応していないため、SACD から吸い出した音源の再生はそのままではできませ
 ん。
 
-KORG AudioGate v3.0.2 で生成した DSF/DSDIFF/WSD での動作を確認しています。
+KORG AudioGate v3.0.2, v4.0.2 で生成した DSF/DSDIFF/WSD での動作を確認し
+ています。
 
 http://www.2l.no/hires/ でダウンロードできる DSDIFF ファイルで動作を確認
 しています。
@@ -131,7 +116,7 @@ e-onkyo music で購入した DSF ファイルで動作を確認しています。
 
 64bit ファイル API を使用するため、Windows 2000 以降が必要です。リンカー
 の設定上は Windows XP 以降に対応すると設定してビルドしていますが、
-Windows 7 / 8.1 / 10 Preview 以外では確認していません。
+Windows 7 / 8.1 / 10 以外では確認していません。
 
 
 シークについて
@@ -177,8 +162,8 @@ WSD では、タイトル、アーティスト、アルバム、ジャンル、コメント、日時に対
 ライセンス
 ----------
 
-kpidop.kpi - DSD over PCM plugin for KbMedia Player
- Copyright (c) 2015, Autch.net.
+kpidop.kpi - DSD Audio over PCM Frames (DoP) plugin for KbMedia Player
+ Copyright (c) 2015, 2016, Autch.net.
 
 kpidop.kpi は MIT ライセンスで配布されます。COPYING ファイルをご覧くださ
 い。
@@ -190,7 +175,7 @@ kpidop.kpi は MIT ライセンスで配布されます。COPYING ファイルをご覧くださ
 ソースコードは以下の GitHub リポジトリから入手できます。
 https://github.com/autch/kpidsd
 
-Visual Studio 2013 Comminuty でビルドしています。
+Visual Studio 2013 Community でビルドしています。
 
 
 履歴
@@ -199,6 +184,8 @@ Visual Studio 2013 Comminuty でビルドしています。
 v1.0.0 (65536)
         初版
 
+v2.0.0 (131072)
+        KbMedia Player 2.80beta23 のプラグイン仕様に対応
 
 ----
 Autch

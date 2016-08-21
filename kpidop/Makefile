@@ -6,4 +6,9 @@ FILES=../Release/kpidop.kpi \
 	kpidop.txt
 
 zip:
-	zip -9j $(ZIPNAME) $(FILES)
+	mkdir -p kpidop/{x86,x64}
+	cp ../Release/kpidop.kpi kpidop/x86/
+	cp ../x64/Release/kpidop.kpi kpidop/x64/
+	cp kpidop.txt kpidop/
+	cp COPYING kpidop/
+	zip -9r $(ZIPNAME) kpidop/
