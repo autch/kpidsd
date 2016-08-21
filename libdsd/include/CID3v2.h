@@ -157,6 +157,10 @@ struct CID3V2TextFrame : public CID3V2Frame
 		uint8_t* p = data;
 
 		encoding = *p++;
+		if (text != NULL) {
+			delete[] text;
+			text = NULL;
+		}
 		text = new uint8_t[header.size + 2]; // -1 for enc byte, +2 for (UTF16-safe) NULL
 		memset(text, 0, header.size + 2);
 		memcpy(text, p, header.size - 1);
