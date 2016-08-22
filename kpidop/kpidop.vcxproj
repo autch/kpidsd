@@ -227,6 +227,7 @@ copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)\x64\Plugins"
     <ClInclude Include="include\CDFFDecoderKpi.h" />
     <ClInclude Include="include\CDSFDecoderKpi.h" />
     <ClInclude Include="include\CKpiFileAdapter.h" />
+    <ClInclude Include="include\CKpiPartialFile.h" />
     <ClInclude Include="include\CWSDDecoderKpi.h" />
     <ClInclude Include="include\dop.h" />
     <ClInclude Include="include\KpiDopDecoderModule.h" />

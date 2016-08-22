@@ -147,12 +147,10 @@
     <ClInclude Include="include\CAbstractFile.h" />
     <ClInclude Include="include\CDFFFile.h" />
     <ClInclude Include="include\CDSFFile.h" />
-    <ClInclude Include="include\CID3v2.h" />
     <ClInclude Include="include\CLargeFile.h" />
     <ClInclude Include="include\CWSDFile.h" />
     <ClInclude Include="include\dff_types.h" />
     <ClInclude Include="include\dsf_types.h" />
-    <ClInclude Include="include\ID3v2.h" />
     <ClInclude Include="include\wsd_types.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -160,7 +158,6 @@
   <ItemGroup>
     <ClCompile Include="src\CDFFFile.cpp" />
     <ClCompile Include="src\CDSFFile.cpp" />
-    <ClCompile Include="src\CID3v2.cpp" />
     <ClCompile Include="src\CLargeFile.cpp" />
     <ClCompile Include="src\CWSDFile.cpp" />
     <ClCompile Include="stdafx.cpp">

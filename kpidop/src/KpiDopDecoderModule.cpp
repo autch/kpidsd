@@ -54,7 +54,7 @@ void KpiDopDecoderModule::GetModuleInfo(const KPI_DECODER_MODULEINFO ** ppInfo)
 DWORD KpiDopDecoderModule::Open(const KPI_MEDIAINFO * cpRequest, IKpiFile * pFile, IKpiFolder * pFolder, IKpiDecoder ** ppDecoder)
 {
 	CAbstractKpi* pDecoder;
-	uint8_t signature[8];
+	uint8_t signature[4];
 
 	pFile->Seek(0, FILE_BEGIN);
 	pFile->Read(signature, sizeof signature);

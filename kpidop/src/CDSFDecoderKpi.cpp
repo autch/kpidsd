@@ -5,7 +5,7 @@
 #include "dop.h"
 #include "CDSFDecoderKpi.h"
 #include "CKpiFileAdapter.h"
-#include "CID3V2.h"
+#include "CKpiPartialFile.h"
 
 CDSFDecoderKpi::CDSFDecoderKpi() : file(), pFile(NULL), srcBuffer(NULL)
 {
@@ -259,8 +259,6 @@ DWORD CDSFDecoderKpi::decodeMSBFirst(PBYTE buffer, DWORD dwSize)
 	return d - buffer;
 }
 
-bool setID3V2AsKMPTag(CID3V2Tag& tag, ID3V2_ID frameId, IKpiTagInfo* pInfo, const wchar_t* szKMPTagName);
-
 DWORD CDSFDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, IKpiTagInfo* pTagInfo, DWORD dwTagGetFlags)
 {
 	if (dwNumber != 1)
@@ -274,96 +272,14 @@ DWORD CDSFDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, 
 		}
 
 		if (!file.Seek(file.Header()->id3v2_pointer, NULL, FILE_BEGIN))
-			return 1;
+			return 0;
 
-		// DSF has ID3V2 tag at end of file, do not use builtin tag parser
-		pTagInfo->GetTagInfo(NULL, NULL, KPI_TAGTYPE_NONE, 0);
-
-		DWORD dwTagSize = (DWORD)(file.FileSize() - file.Header()->id3v2_pointer);
-		BYTE* buf = new BYTE[dwTagSize];
-
-		DWORD dwBytesRead = 0;
-
-		file.Read(buf, dwTagSize, &dwBytesRead);
-		if (dwBytesRead != dwTagSize)
-		{
-			delete[] buf;
-			return 1;
-		}
-
-		{
-			CID3V2Tag tag;
-
-			if (tag.Parse(buf, dwTagSize))
-			{
-				bool haveDate = false;
-
-				setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TIT2"), pTagInfo, SZ_KMP_NAME_TITLE);
-				setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TPE1"), pTagInfo, SZ_KMP_NAME_ARTIST);
-				setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TALB"), pTagInfo, SZ_KMP_NAME_ALBUM);
-				setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TCON"), pTagInfo, SZ_KMP_NAME_GENRE);
-				setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TSSE"), pTagInfo, SZ_KMP_NAME_COMMENT);
-				setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TRCK"), pTagInfo, SZ_KMP_NAME_TRACKNUMBER);
-
-				if (tag.Version() == 3)
-				{
-					std::string datetime;
-					CID3V2TextFrame f;
-
-					if (tag.FindTextFrame(MAKE_ID3V2_ID_S("TYER"), f))
-					{
-						datetime.append((const char*)f.text);
-						haveDate = true;
-					}
-					if (tag.FindTextFrame(MAKE_ID3V2_ID_S("TDAT"), f))
-					{
-						char szDate[8];
-						_snprintf_s(szDate, sizeof szDate, "-%.2s-%.2s", f.text + 2, f.text);
-						datetime.append(szDate);
-						haveDate = true;
-					}
-					if (tag.FindTextFrame(MAKE_ID3V2_ID_S("TIME"), f))
-					{
-						char szTime[8];
-						_snprintf_s(szTime, sizeof szTime, " %.2s:%.2s", f.text, f.text + 2);
-						datetime.append(szTime);
-						haveDate = true;
-					}
-					if (haveDate)
-						pTagInfo->wSetValueA(SZ_KMP_NAME_DATE, -1, datetime.c_str(), -1);
-				}
-				if (!haveDate && !setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TDRC"), pTagInfo, SZ_KMP_NAME_DATE))
-					setID3V2AsKMPTag(tag, MAKE_ID3V2_ID_S("TDRL"), pTagInfo, SZ_KMP_NAME_DATE);
-			}
-		}
-
-		delete[] buf;
+		IKpiFile* kpiFile = ((CKpiFileAdapter*)pFile)->GetKpiFile();
+		CKpiPartialFile partialFile(kpiFile, file.Header()->id3v2_pointer,
+			pFile->FileSize());
+		pTagInfo->GetTagInfo(&partialFile, NULL, KPI_TAGTYPE_ID3, dwTagGetFlags);
+		kpiFile->Seek(file.Header()->id3v2_pointer, FILE_BEGIN);
 	}
 
 	return 1;
-}
-
-bool setID3V2AsKMPTag(CID3V2Tag& tag, ID3V2_ID frameId, IKpiTagInfo* pInfo, const wchar_t* szKMPTagName)
-{
-	CID3V2TextFrame frame;
-	
-	if(!tag.FindTextFrame(frameId, frame))
-		return false;
-
-	switch (frame.encoding)
-	{
-	case ID3V2_ENCODING_ISO8859_1:
-		pInfo->wSetValueA(szKMPTagName, -1, (const char*)frame.text, -1);
-		break;
-	case ID3V2_ENCODING_UTF16BOM:
-		pInfo->wSetValueW(szKMPTagName, -1, (const WCHAR*)(frame.text + 2), -1);
-		break;
-	case ID3V2_ENCODING_UTF8:
-		pInfo->wSetValueU8(szKMPTagName, -1, (const char*)frame.text, -1);
-		break;
-	case ID3V2_ENCODING_UTF16BE:
-		pInfo->wSetValueW(szKMPTagName, -1, (const WCHAR*)frame.text, -1);
-		break;
-	}
-	return true;
 }
