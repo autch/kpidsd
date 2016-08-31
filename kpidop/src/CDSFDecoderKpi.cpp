@@ -279,6 +279,8 @@ DWORD CDSFDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, 
 			pFile->FileSize());
 		pTagInfo->GetTagInfo(&partialFile, NULL, KPI_TAGTYPE_ID3, dwTagGetFlags);
 		kpiFile->Seek(file.Header()->id3v2_pointer, FILE_BEGIN);
+
+		setBitrate(file.FmtHeader()->sampling_frequency, file.FmtHeader()->channel_num, pTagInfo);
 	}
 
 	return 1;

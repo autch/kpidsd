@@ -218,6 +218,8 @@ DWORD CWSDDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, 
 		trim(SZ_KMP_NAME_GENRE, pTagInfo, file.Text()->genre, sizeof file.Text()->genre);
 		trim(SZ_KMP_NAME_COMMENT, pTagInfo, file.Text()->comment, sizeof file.Text()->comment);
 		trim(SZ_KMP_NAME_DATE, pTagInfo, file.Text()->dateAndTime, sizeof file.Text()->dateAndTime);
+
+		setBitrate(file.DataSpec()->samplingFrequency, file.DataSpec()->channels, pTagInfo);
 	}
 
 	return 1;

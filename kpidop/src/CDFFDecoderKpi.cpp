@@ -35,6 +35,8 @@ DWORD CDFFDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, 
 			if (it != file.FRM8().comt.comments.end())
 				pTagInfo->wSetValueA(SZ_KMP_NAME_COMMENT, -1, it->commentText.c_str(), -1);
 		}
+
+		setBitrate(file.FRM8().prop.fs.data.sampleRate, file.FRM8().prop.chnl.data.numChannels, pTagInfo);
 	}
 
 	return 1;
