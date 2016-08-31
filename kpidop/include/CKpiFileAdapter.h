@@ -11,6 +11,10 @@ public:
 	CKpiFileAdapter(IKpiFile* file) : kpiFile(file)
 	{
 	}
+	virtual ~CKpiFileAdapter()
+	{
+		Close();
+	}
 
 	virtual void Close()
 	{

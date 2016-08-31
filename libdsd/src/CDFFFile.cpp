@@ -1,14 +1,13 @@
 #include "stdafx.h"
 #include "CDFFFile.h"
 
-CDFFFile::CDFFFile()
+CDFFFile::CDFFFile() : CLargeFile()
 {
 
 }
 
 CDFFFile::~CDFFFile()
 {
-	CLargeFile::~CLargeFile();
 }
 
 void CDFFFile::Close()

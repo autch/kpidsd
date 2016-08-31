@@ -8,7 +8,6 @@ CWSDFile::CWSDFile() : CLargeFile()
 
 CWSDFile::~CWSDFile()
 {
-	CLargeFile::~CLargeFile();
 }
 
 void CWSDFile::Close()

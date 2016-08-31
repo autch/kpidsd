@@ -12,9 +12,14 @@
 // Windows ヘッダー ファイル:
 #include <windows.h>
 #include <mbstring.h>
+#include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <stdint.h>
+
+#include <string>
+#include <vector>
+#include <stack>
 
 #ifdef _DEBUG
 #define LEAK_CHECK

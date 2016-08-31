@@ -9,8 +9,8 @@
 class CDFFDecoderKpi : public CAbstractKpi
 {
 private:
-	CAbstractFile* pFile;
 	CDFFFile file;
+	CAbstractFile* pFile;
 	KPI_MEDIAINFO mInfo;
 
 	BYTE last_marker;

@@ -8,8 +8,8 @@
 class CDSFDecoderKpi : public CAbstractKpi
 {
 private:
-	CAbstractFile* pFile;
 	CDSFFile file;
+	CAbstractFile* pFile;
 	KPI_MEDIAINFO mInfo;
 
 	BYTE* srcBuffer;

@@ -3,6 +3,8 @@
 class CAbstractFile
 {
 public:
+	virtual ~CAbstractFile() {}
+
 	virtual void Close() = 0;
 
 	virtual void Reset() const { Seek(0, NULL, FILE_BEGIN); }

@@ -10,8 +10,8 @@
 class CWSDDecoderKpi : public CAbstractKpi
 {
 private:
-	CAbstractFile* pFile;
 	CWSDFile file;
+	CAbstractFile* pFile;
 	KPI_MEDIAINFO mInfo;
 
 	BYTE* srcBuffer;

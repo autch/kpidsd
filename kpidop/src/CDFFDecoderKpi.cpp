@@ -81,15 +81,15 @@ void CDFFDecoderKpi::Reset()
 
 DWORD CDFFDecoderKpi::Open(const KPI_MEDIAINFO* pRequest, IKpiFile* kpiFile, IKpiFolder* folder)
 {
-	CKpiFileAdapter* pFile = new CKpiFileAdapter(kpiFile);
-	if (!file.Open(pFile)) {
-		delete pFile;
+	CKpiFileAdapter* pKpiFile = new CKpiFileAdapter(kpiFile);
+	if (!file.Open(pKpiFile)) {
+		delete pKpiFile;
 		return 0;
 	}
 
 	// DST compression is not supported
 	if (file.FRM8().prop.cmpr.compressionName != CMPR_NAME_DSD) {
-		delete pFile;
+		delete pKpiFile;
 		return 0;
 	}
 
@@ -156,13 +156,13 @@ DWORD CDFFDecoderKpi::Open(const KPI_MEDIAINFO* pRequest, IKpiFile* kpiFile, IKp
 	Reset();
 
 	kpiFile->AddRef();
-	this->pFile = pFile;
+	this->pFile = pKpiFile;
 
 	return mInfo.dwCount;
 
 fail_cleanup:
 	Close();
-	delete pFile;
+	delete pKpiFile;
 	return 0;
 }
 

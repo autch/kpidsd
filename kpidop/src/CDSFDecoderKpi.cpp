@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-#include <stdlib.h>
-
 #include "dop.h"
 #include "CDSFDecoderKpi.h"
 #include "CKpiFileAdapter.h"
@@ -33,10 +31,10 @@ void CDSFDecoderKpi::Close()
 
 DWORD CDSFDecoderKpi::Open(const KPI_MEDIAINFO* pRequest, IKpiFile* kpiFile, IKpiFolder* folder)
 {
-	CKpiFileAdapter* pFile = new CKpiFileAdapter(kpiFile);
+	CKpiFileAdapter* pKpiFile = new CKpiFileAdapter(kpiFile);
 
-	if (!file.Open(pFile)) {
-		delete pFile;
+	if (!file.Open(pKpiFile)) {
+		delete pKpiFile;
 		return 0;
 	}
 
@@ -87,23 +85,25 @@ DWORD CDSFDecoderKpi::Open(const KPI_MEDIAINFO* pRequest, IKpiFile* kpiFile, IKp
 	else
 		mInfo.nBitsPerSample = 32;
 
-	uint64_t qwSamples = file.FmtHeader()->sample_count;
-	qwSamples *= 1000 * 10000;
-	qwSamples /= dsd_fs;
-	mInfo.qwLength = qwSamples;
+	{
+		uint64_t qwSamples = file.FmtHeader()->sample_count;
+		qwSamples *= 1000 * 10000;
+		qwSamples /= dsd_fs;
+		mInfo.qwLength = qwSamples;
+	}
 
 	srcBufferSize = file.FmtHeader()->block_size_per_channel * channels;
 	srcBuffer = new BYTE[srcBufferSize];
 
 	Reset();
 	kpiFile->AddRef();
-	this->pFile = pFile;
+	this->pFile = pKpiFile;
 
 	return mInfo.dwCount;
 
 fail_cleanup:
 	Close();
-	delete pFile;
+	delete pKpiFile;
 	return 0;
 }
 
@@ -147,7 +147,7 @@ DWORD CDSFDecoderKpi::Render(BYTE* buffer, DWORD dwSizeSample)
 	uint64_t sampleCount = file.FmtHeader()->sample_count;
 	DWORD dwBytesPerBlockChannel = file.FmtHeader()->block_size_per_channel;
 	int bps = file.FmtHeader()->bits_per_sample;
-	DWORD dwBytesRendered;
+	DWORD dwBytesRendered = 0;
 	uint64_t dataEndPos = file.DataOffset() + file.DataHeader()->size - 12;
 	int channels = file.FmtHeader()->channel_num;
 

@@ -12,6 +12,7 @@
 
 #include <stdint.h>
 #include <vector>
-
+#include <stack>
+#include <string>
 
 // TODO: プログラムに必要な追加ヘッダーをここで参照してください。

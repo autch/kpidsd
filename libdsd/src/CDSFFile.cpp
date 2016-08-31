@@ -7,7 +7,6 @@ CDSFFile::CDSFFile() : CLargeFile(), dataOffset(0)
 
 CDSFFile::~CDSFFile()
 {
-	CLargeFile::~CLargeFile();
 }
 
 void CDSFFile::Close()

@@ -1,8 +1,5 @@
 #include "stdafx.h"
 
-#include <stdlib.h>
-#include <string.h>
-
 #include "CWSDDecoderKpi.h"
 #include "dop.h"
 #include "CKpiFileAdapter.h"
@@ -40,9 +37,9 @@ void CWSDDecoderKpi::Reset()
 
 DWORD CWSDDecoderKpi::Open(const KPI_MEDIAINFO* pRequest, IKpiFile* kpiFile, IKpiFolder* folder)
 {
-	CKpiFileAdapter* pFile = new CKpiFileAdapter(kpiFile);
-	if (!file.Open(pFile)) {
-		delete pFile;
+	CKpiFileAdapter* pKpiFile = new CKpiFileAdapter(kpiFile);
+	if (!file.Open(pKpiFile)) {
+		delete pKpiFile;
 		return 0;
 	}
 
@@ -106,7 +103,7 @@ DWORD CWSDDecoderKpi::Open(const KPI_MEDIAINFO* pRequest, IKpiFile* kpiFile, IKp
 
 	Reset();
 	kpiFile->AddRef();
-	this->pFile = pFile;
+	this->pFile = pKpiFile;
 
 	return mInfo.dwCount;
 

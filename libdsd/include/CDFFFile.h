@@ -4,7 +4,6 @@
 
 #include "dff_types.h"
 #include "CLargeFile.h"
-#include <stack>
 
 struct ChunkStep
 {
