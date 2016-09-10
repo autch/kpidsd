@@ -176,7 +176,7 @@ DWORD CWSDDecoderKpi::Render(BYTE* buffer, DWORD dwSizeSample)
 
 	last_marker = marker;
 
-	return (d - buffer) / mInfo.dwChannels / (mInfo.nBitsPerSample / 8);
+	return (DWORD)(d - buffer) / mInfo.dwChannels / (mInfo.nBitsPerSample / 8);
 }
 
 void trim(const wchar_t* szName, IKpiTagInfo* pInfo, uint8_t* buf, size_t size)

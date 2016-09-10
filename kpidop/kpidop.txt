@@ -47,7 +47,7 @@ ASIO/WASAPI サポートが必要です。通常 waveOut/DirectSound では動作しませ
 んが、VMware のゲストとして動かす場合は waveOut や DirectSound でないと
 動作しないことがあります。
 
-開発及び動作確認は 2.80beta22, 2.80beta23a で行っています。
+開発及び動作確認は 2.80beta23a/b, 2.80beta24, 2.80beta25 で行っています。
 
 
 デバイス設定
@@ -104,8 +104,8 @@ DSDIFF フォーマットにおける DST (Direct Stream Transfer) コーデックには
 KORG AudioGate v3.0.2, v4.0.2 で生成した DSF/DSDIFF/WSD での動作を確認し
 ています。
 
-http://www.2l.no/hires/ でダウンロードできる DSDIFF ファイルで動作を確認
-しています。
+http://www.2l.no/hires/ でダウンロードできる DSDIFF, DSF ファイルで動作
+を確認しています。
 
 e-onkyo music で購入した DSF ファイルで動作を確認しています。
 

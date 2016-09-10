@@ -162,15 +162,15 @@ DWORD CDSFDecoderKpi::Render(BYTE* buffer, DWORD dwSizeSample)
 		switch (bps)
 		{
 		case DSF_BPS_LSB:
-			dwBytesRendered = decodeLSBFirst(d, de - d);
+			dwBytesRendered = decodeLSBFirst(d, (DWORD)(de - d));
 			break;
 		case DSF_BPS_MSB:
-			dwBytesRendered = decodeMSBFirst(d, de - d);
+			dwBytesRendered = decodeMSBFirst(d, (DWORD)(de - d));
 			break;
 		}
 		d += dwBytesRendered;
 	}
-	return (d - buffer) / mInfo.dwChannels / (mInfo.nBitsPerSample / 8);
+	return (DWORD)(d - buffer) / mInfo.dwChannels / (mInfo.nBitsPerSample / 8);
 }
 
 // reverse() ‚Ì—v‚é‚â‚Â
@@ -213,7 +213,7 @@ DWORD CDSFDecoderKpi::decodeLSBFirst(PBYTE buffer, DWORD dwSize)
 		samplesRendered += 16;
 	}
 	last_marker = marker;
-	return d - buffer;
+	return (DWORD)(d - buffer);
 }
 
 // reverse() ‚Ì—v‚ç‚È‚¢‚â‚Â
@@ -256,7 +256,7 @@ DWORD CDSFDecoderKpi::decodeMSBFirst(PBYTE buffer, DWORD dwSize)
 		samplesRendered += 16;
 	}
 	last_marker = marker;
-	return d - buffer;
+	return (DWORD)(d - buffer);
 }
 
 DWORD CDSFDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, IKpiTagInfo* pTagInfo, DWORD dwTagGetFlags)

@@ -222,5 +222,5 @@ DWORD CDFFDecoderKpi::Render(BYTE* buffer, DWORD dwSizeSample)
 
 	last_marker = marker;
 
-	return (d - buffer) / mInfo.dwChannels / (mInfo.nBitsPerSample / 8);
+	return (DWORD)(d - buffer) / mInfo.dwChannels / (mInfo.nBitsPerSample / 8);
 }

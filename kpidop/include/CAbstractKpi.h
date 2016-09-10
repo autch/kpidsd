@@ -14,16 +14,22 @@ protected:
 	void setBitrate(uint64_t samplesPerSec, uint64_t channels, IKpiTagInfo* pTagInfo)
 	{
 		wchar_t bitrate[32];
-		long br;
+		uint64_t br;
 
 		br = samplesPerSec * channels;
 		if(br >= 1000 * 1000) 
-			swprintf_s(bitrate, L"%d.%03dMbps", br / 1000 / 1000, (br / 1000) % 1000);
+			swprintf_s(bitrate, L"%lld.%03lldMbps", br / 1000 / 1000, (br / 1000) % 1000);
 		else if(br >= 1000)
-			swprintf_s(bitrate, L"%d.%03dkbps", br / 1000, br % 1000);
+			swprintf_s(bitrate, L"%lld.%03lldkbps", br / 1000, br % 1000);
 		else
-			swprintf_s(bitrate, L"%dbps", br);
+			swprintf_s(bitrate, L"%lldbps", br);
 
 		pTagInfo->wSetValueW(SZ_KMP_NAME_BITRATE, -1, bitrate, -1);
+		{
+			wchar_t samplesPerSec_text[32];
+
+			swprintf_s(samplesPerSec_text, L"%lld.%03lldMHz", samplesPerSec / 1000 / 1000, (samplesPerSec / 1000) % 1000);
+			pTagInfo->wSetValueW(L"DSD_SamplesPerSec", -1, samplesPerSec_text, -1);
+		}
 	}
 };

@@ -44,7 +44,7 @@ public:
 	DWORD WINAPI Read(void *pBuffer, DWORD dwSize)
 	{
 		if (dwSize + m_qwCurrentPos > m_qwEndOffset) {
-			dwSize = m_qwEndOffset - m_qwCurrentPos;
+			dwSize = (DWORD)(m_qwEndOffset - m_qwCurrentPos);
 		}
 		dwSize = m_pFile->Read(pBuffer, dwSize);
 		m_qwCurrentPos += dwSize;
@@ -64,10 +64,10 @@ public:
 			i64Pos += m_qwEndOffset;
 			break;
 		}
-		if (i64Pos < m_qwStartOffset) {
+		if (i64Pos < (__int64)m_qwStartOffset) {
 			i64Pos = m_qwStartOffset;
 		}
-		else if (i64Pos > m_qwEndOffset) {
+		else if (i64Pos > (__int64)m_qwEndOffset) {
 			i64Pos = m_qwEndOffset;
 		}
 		m_qwCurrentPos = i64Pos;
