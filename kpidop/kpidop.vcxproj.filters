@@ -45,20 +45,20 @@
     <ClInclude Include="include\CKpiFileAdapter.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta23\SDK\kmp_pi.h">
-      <Filter>kpi sdk</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta23\SDK\kpi.h">
-      <Filter>kpi sdk</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta23\SDK\kpi_decoder.h">
-      <Filter>kpi sdk</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta23\SDK\kpi_impl.h">
-      <Filter>kpi sdk</Filter>
-    </ClInclude>
     <ClInclude Include="include\CKpiPartialFile.h">
       <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta29\SDK\kmp_pi.h">
+      <Filter>kpi sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta29\SDK\kpi.h">
+      <Filter>kpi sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta29\SDK\kpi_decoder.h">
+      <Filter>kpi sdk</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta29\SDK\kpi_impl.h">
+      <Filter>kpi sdk</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

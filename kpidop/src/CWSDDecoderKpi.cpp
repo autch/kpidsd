@@ -212,12 +212,12 @@ DWORD CWSDDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, 
 		// do not use builtin tag parser
 		pTagInfo->GetTagInfo(NULL, NULL, KPI_TAGTYPE_NONE, 0);
 
-		trim(SZ_KMP_NAME_TITLE, pTagInfo, file.Text()->title, sizeof file.Text()->title);
-		trim(SZ_KMP_NAME_ARTIST, pTagInfo, file.Text()->artist, sizeof file.Text()->artist);
-		trim(SZ_KMP_NAME_ALBUM, pTagInfo, file.Text()->album, sizeof file.Text()->album);
-		trim(SZ_KMP_NAME_GENRE, pTagInfo, file.Text()->genre, sizeof file.Text()->genre);
-		trim(SZ_KMP_NAME_COMMENT, pTagInfo, file.Text()->comment, sizeof file.Text()->comment);
-		trim(SZ_KMP_NAME_DATE, pTagInfo, file.Text()->dateAndTime, sizeof file.Text()->dateAndTime);
+		trim(SZ_KMP_NAME_TITLE_W, pTagInfo, file.Text()->title, sizeof file.Text()->title);
+		trim(SZ_KMP_NAME_ARTIST_W, pTagInfo, file.Text()->artist, sizeof file.Text()->artist);
+		trim(SZ_KMP_NAME_ALBUM_W, pTagInfo, file.Text()->album, sizeof file.Text()->album);
+		trim(SZ_KMP_NAME_GENRE_W, pTagInfo, file.Text()->genre, sizeof file.Text()->genre);
+		trim(SZ_KMP_NAME_COMMENT_W, pTagInfo, file.Text()->comment, sizeof file.Text()->comment);
+		trim(SZ_KMP_NAME_DATE_W, pTagInfo, file.Text()->dateAndTime, sizeof file.Text()->dateAndTime);
 
 		setBitrate(file.DataSpec()->samplingFrequency, file.DataSpec()->channels, pTagInfo);
 	}

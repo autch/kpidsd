@@ -219,10 +219,10 @@ copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)\x64\Plugins"
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta23\SDK\kmp_pi.h" />
-    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta23\SDK\kpi.h" />
-    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta23\SDK\kpi_decoder.h" />
-    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta23\SDK\kpi_impl.h" />
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta29\SDK\kmp_pi.h" />
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta29\SDK\kpi.h" />
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta29\SDK\kpi_decoder.h" />
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta29\SDK\kpi_impl.h" />
     <ClInclude Include="include\CAbstractKpi.h" />
     <ClInclude Include="include\CDFFDecoderKpi.h" />
     <ClInclude Include="include\CDSFDecoderKpi.h" />

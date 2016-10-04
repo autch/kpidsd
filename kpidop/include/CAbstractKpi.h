@@ -24,7 +24,7 @@ protected:
 		else
 			swprintf_s(bitrate, L"%lldbps", br);
 
-		pTagInfo->wSetValueW(SZ_KMP_NAME_BITRATE, -1, bitrate, -1);
+		pTagInfo->wSetValueW(SZ_KMP_NAME_BITRATE_W, -1, bitrate, -1);
 		{
 			wchar_t samplesPerSec_text[32];
 

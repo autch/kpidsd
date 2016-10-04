@@ -5,7 +5,7 @@ DSD (Direct Stream Digital) 音源を DSD Audio over PCM Frames (DoP) 方式
 で再生するための KbMedia Player プラグインです。対応する拡張子は dsf, 
 dff, wsd です。
 
-KbMedia Player 2.80beta23 以降が必要です。
+KbMedia Player 2.80beta29 以降が必要です。
 
 KbMedia Player のプラグイン仕様は PCM を前提として作られているため、DSD
 を再生する上で制限事項がありますので、このファイルは最後まで目を通してく
@@ -47,7 +47,8 @@ ASIO/WASAPI サポートが必要です。通常 waveOut/DirectSound では動作しませ
 んが、VMware のゲストとして動かす場合は waveOut や DirectSound でないと
 動作しないことがあります。
 
-開発及び動作確認は 2.80beta23a/b, 2.80beta24, 2.80beta25 で行っています。
+開発及び動作確認は 2.80beta23a/b, 2.80beta24, 2.80beta25, 2.80beta29 で
+行っています。
 
 
 デバイス設定
@@ -178,7 +179,7 @@ v1.0.0 (65536)
         初版
 
 v2.0.0 (131072)
-        KbMedia Player 2.80beta23 のプラグイン仕様に対応
+        KbMedia Player 2.80beta29 のプラグイン仕様に対応
 
 ----
 Autch

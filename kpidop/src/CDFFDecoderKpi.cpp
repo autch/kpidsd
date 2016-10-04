@@ -26,14 +26,14 @@ DWORD CDFFDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, 
 		pTagInfo->GetTagInfo(NULL, NULL, KPI_TAGTYPE_NONE, 0);
 
 		if (file.FRM8().diin.diar.artistText.length() > 0)
-			pTagInfo->wSetValueA(SZ_KMP_NAME_ARTIST, -1, file.FRM8().diin.diar.artistText.c_str(), -1);
+			pTagInfo->wSetValueA(SZ_KMP_NAME_ARTIST_W, -1, file.FRM8().diin.diar.artistText.c_str(), -1);
 		if (file.FRM8().diin.diti.titleText.length() > 0)
-			pTagInfo->wSetValueA(SZ_KMP_NAME_TITLE, -1, file.FRM8().diin.diti.titleText.c_str(), -1);
+			pTagInfo->wSetValueA(SZ_KMP_NAME_TITLE_W, -1, file.FRM8().diin.diti.titleText.c_str(), -1);
 		if (file.FRM8().comt.comments.size() > 0)
 		{
 			std::vector<Comment>::iterator it = file.FRM8().comt.comments.begin();
 			if (it != file.FRM8().comt.comments.end())
-				pTagInfo->wSetValueA(SZ_KMP_NAME_COMMENT, -1, it->commentText.c_str(), -1);
+				pTagInfo->wSetValueA(SZ_KMP_NAME_COMMENT_W, -1, it->commentText.c_str(), -1);
 		}
 
 		setBitrate(file.FRM8().prop.fs.data.sampleRate, file.FRM8().prop.chnl.data.numChannels, pTagInfo);
