@@ -102,7 +102,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;KPIDOP_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -131,7 +131,7 @@ copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)\x86\Plugins"
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;KPIDOP_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -162,7 +162,7 @@ copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)\x64\Plugins"
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;KPIDOP_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -195,7 +195,7 @@ copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)\x86\Plugins"
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;KPIDOP_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -219,10 +219,10 @@ copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)\x64\Plugins"
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta29\SDK\kmp_pi.h" />
-    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta29\SDK\kpi.h" />
-    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta29\SDK\kpi_decoder.h" />
-    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta29\SDK\kpi_impl.h" />
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta30\SDK\kmp_pi.h" />
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta30\SDK\kpi.h" />
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta30\SDK\kpi_decoder.h" />
+    <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta30\SDK\kpi_impl.h" />
     <ClInclude Include="include\CAbstractKpi.h" />
     <ClInclude Include="include\CDFFDecoderKpi.h" />
     <ClInclude Include="include\CDSFDecoderKpi.h" />
