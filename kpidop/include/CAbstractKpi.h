@@ -16,7 +16,7 @@ protected:
 		wchar_t bitrate[32];
 		uint64_t br;
 
-		br = samplesPerSec * channels;
+		br = samplesPerSec;
 		if(br >= 1000 * 1000) 
 			swprintf_s(bitrate, L"%lld.%03lldMbps", br / 1000 / 1000, (br / 1000) % 1000);
 		else if(br >= 1000)
