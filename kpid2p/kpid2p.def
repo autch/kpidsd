@@ -1,0 +1,4 @@
+LIBRARY	kpid2p.kpi
+
+EXPORTS
+	kpi_CreateInstance
