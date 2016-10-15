@@ -19,12 +19,6 @@ private:
 	
 	uint64_t samplesRendered;
 
-	// http://graphics.stanford.edu/~seander/bithacks.html#ReverseByteWith64BitsDiv
-	inline BYTE reverse(BYTE b) const
-	{
-		return ((b * 0x0202020202ULL & 0x010884422010ULL) % 1023) & 0xff;
-	}
-
 public:
 	CDSFDecoderKpi();
 	virtual ~CDSFDecoderKpi();

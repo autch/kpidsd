@@ -251,11 +251,14 @@ copy /y "$(ProjectDir)kpid2p.txt" "$(KMPPluginsPath)\x64\Plugins"
     <None Include="kpid2p.def" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\CAbstractKpi.cpp" />
     <ClCompile Include="src\CDFFDecoderKpi.cpp" />
     <ClCompile Include="src\CDSFDecoderKpi.cpp" />
     <ClCompile Include="src\CWSDDecoderKpi.cpp" />
     <ClCompile Include="src\dllexports.cpp" />
     <ClCompile Include="src\dllmain.cpp" />
+    <ClCompile Include="src\Downsampler.cpp" />
+    <ClCompile Include="src\DSD2PCM.cpp" />
     <ClCompile Include="src\KpiD2pDecoderModule.cpp" />
     <ClCompile Include="src\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

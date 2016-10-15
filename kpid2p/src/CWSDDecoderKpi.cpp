@@ -101,10 +101,6 @@ DWORD CWSDDecoderKpi::Open(const KPI_MEDIAINFO* pRequest, IKpiFile* kpiFile, IKp
 	this->pFile = pKpiFile;
 
 	return mInfo.dwCount;
-
-fail_cleanup:
-	Close();
-	return 0;
 }
 
 UINT64 WINAPI CWSDDecoderKpi::Seek(UINT64 qwPosSample, DWORD dwFlag)
@@ -125,9 +121,8 @@ DWORD CWSDDecoderKpi::Render(BYTE* buffer, DWORD dwSizeSample)
 {
 	DWORD dwBytesRead = 0;
 	DWORD dwSize = dwSizeSample * (mInfo.dwChannels * (mInfo.nBitsPerSample / 8));
-	PBYTE d = buffer, de = buffer + dwSize;
-	int channels = file.DataSpec()->channels;
-	uint64_t totalSamplesWritten = 0, samplesWritten = 0;
+	PBYTE d = buffer;
+	DWORD totalSamplesWritten = 0, samplesWritten = 0;
 	DWORD dwSamplesToRender = dwSizeSample;
 
 	::ZeroMemory(buffer, dwSize);

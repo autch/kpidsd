@@ -59,16 +59,16 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="c:\usr\local\kbmed280_beta30\SDK\kmp_pi.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>kpi sdk</Filter>
     </ClInclude>
     <ClInclude Include="c:\usr\local\kbmed280_beta30\SDK\kpi.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>kpi sdk</Filter>
     </ClInclude>
     <ClInclude Include="c:\usr\local\kbmed280_beta30\SDK\kpi_decoder.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>kpi sdk</Filter>
     </ClInclude>
     <ClInclude Include="c:\usr\local\kbmed280_beta30\SDK\kpi_impl.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>kpi sdk</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -97,6 +97,15 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="src\KpiD2pDecoderModule.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Downsampler.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DSD2PCM.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CAbstractKpi.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

@@ -94,11 +94,6 @@ DWORD CDSFDecoderKpi::Open(const KPI_MEDIAINFO* pRequest, IKpiFile* kpiFile, IKp
 	this->pFile = pKpiFile;
 
 	return mInfo.dwCount;
-
-fail_cleanup:
-	Close();
-	delete pKpiFile;
-	return 0;
 }
 
 void CDSFDecoderKpi::Reset()
@@ -134,15 +129,16 @@ DWORD CDSFDecoderKpi::Render(BYTE* buffer, DWORD dwSizeSample)
 {
 	DWORD dwBytesRead = 0;
 	DWORD dwSize = dwSizeSample * (mInfo.dwChannels * (mInfo.nBitsPerSample / 8));
-	PBYTE d = buffer, de = buffer + dwSize;
+	PBYTE d = buffer;
+	uint64_t sampleCount = file.FmtHeader()->sample_count;
 	DWORD dwBytesPerBlockChannel = file.FmtHeader()->block_size_per_channel;
 	int bps = file.FmtHeader()->bits_per_sample;
 	uint64_t dataEndPos = file.DataOffset() + file.DataHeader()->size - 12;
-	uint64_t totalSamplesWritten = 0, samplesWritten = 0;
+	DWORD totalSamplesWritten = 0, samplesWritten = 0;
 	DWORD dwSamplesToRender = dwSizeSample;
 
 	::ZeroMemory(buffer, dwSize);
-	while (dwSamplesToRender > 0)
+	while (dwSamplesToRender > 0 && samplesRendered < sampleCount)
 	{
 		if (!dsd2pcm.isInFlush() && file.Tell() >= dataEndPos) {
 			dsd2pcm.RenderLast();
@@ -161,6 +157,11 @@ DWORD CDSFDecoderKpi::Render(BYTE* buffer, DWORD dwSizeSample)
 		if (dsd2pcm.isInFlush() && samplesWritten < dwSamplesToRender)
 			break;
 		dwSamplesToRender -= samplesWritten;
+		samplesRendered += samplesWritten * 16;
+
+		if (!dsd2pcm.isInFlush() && dwSamplesToRender * 16 > sampleCount - samplesRendered) {
+			dsd2pcm.RenderLast();
+		}
 	}
 
 	return totalSamplesWritten;

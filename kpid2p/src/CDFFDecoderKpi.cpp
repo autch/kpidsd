@@ -150,20 +150,15 @@ DWORD CDFFDecoderKpi::Open(const KPI_MEDIAINFO* pRequest, IKpiFile* kpiFile, IKp
 	this->pFile = pKpiFile;
 
 	return mInfo.dwCount;
-
-fail_cleanup:
-	Close();
-	delete pKpiFile;
-	return 0;
 }
 
 DWORD CDFFDecoderKpi::Render(BYTE* buffer, DWORD dwSizeSample)
 {
 	DWORD dwBytesRead = 0;
 	DWORD dwSize = dwSizeSample * (mInfo.dwChannels * (mInfo.nBitsPerSample / 8));
-	PBYTE d = buffer, de = buffer + dwSize;
+	PBYTE d = buffer;
 	uint64_t dsdEndPos = file.FRM8().dsd.OffsetToData() + file.FRM8().dsd.DataSize();
-	uint64_t totalSamplesWritten = 0, samplesWritten = 0;
+	DWORD totalSamplesWritten = 0, samplesWritten = 0;
 	DWORD dwSamplesToRender = dwSizeSample;
 
 	::ZeroMemory(buffer, dwSize);
