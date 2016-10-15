@@ -4,6 +4,7 @@
 #include "wsd_types.h"
 #include "CAbstractFile.h"
 #include "CAbstractKpi.h"
+#include "DSD2DoP.h"
 
 #define SAMPLES_PER_BLOCK		(4096)
 
@@ -13,11 +14,10 @@ private:
 	CWSDFile file;
 	CAbstractFile* pFile;
 	KPI_MEDIAINFO mInfo;
+	DSD2DoP dsd2dop;
 
 	BYTE* srcBuffer;
 	DWORD srcBufferSize;
-
-	BYTE last_marker;
 
 public:
 	CWSDDecoderKpi();

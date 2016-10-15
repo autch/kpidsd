@@ -230,6 +230,7 @@ copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)\x64\Plugins"
     <ClInclude Include="include\CKpiPartialFile.h" />
     <ClInclude Include="include\CWSDDecoderKpi.h" />
     <ClInclude Include="include\dop.h" />
+    <ClInclude Include="include\DSD2DoP.h" />
     <ClInclude Include="include\KpiDopDecoderModule.h" />
     <ClInclude Include="include\stdafx.h" />
     <ClInclude Include="include\targetver.h" />
@@ -244,6 +245,7 @@ copy /y "$(ProjectDir)kpidop.txt" "$(KMPPluginsPath)\x64\Plugins"
     <ClCompile Include="src\CWSDDecoderKpi.cpp" />
     <ClCompile Include="src\dllexports.cpp" />
     <ClCompile Include="src\dllmain.cpp" />
+    <ClCompile Include="src\DSD2DoP.cpp" />
     <ClCompile Include="src\KpiDopDecoderModule.cpp" />
     <ClCompile Include="src\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

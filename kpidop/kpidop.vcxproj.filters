@@ -60,6 +60,9 @@
     <ClInclude Include="..\..\..\..\..\usr\local\kbmed280_beta30\SDK\kpi_impl.h">
       <Filter>kpi sdk</Filter>
     </ClInclude>
+    <ClInclude Include="include\DSD2DoP.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="kpidop.def">
@@ -87,6 +90,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="src\KpiDopDecoderModule.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DSD2DoP.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

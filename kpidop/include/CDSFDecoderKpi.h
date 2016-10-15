@@ -4,6 +4,7 @@
 #include "dsf_types.h"
 #include "CAbstractFile.h"
 #include "CAbstractKpi.h"
+#include "DSD2DoP.h"
 
 class CDSFDecoderKpi : public CAbstractKpi
 {
@@ -11,22 +12,12 @@ private:
 	CDSFFile file;
 	CAbstractFile* pFile;
 	KPI_MEDIAINFO mInfo;
+	DSD2DoP dsd2dop;
 
 	BYTE* srcBuffer;
 	DWORD srcBufferSize;
 	
 	uint64_t samplesRendered;
-
-	BYTE last_marker;
-
-	DWORD decodeLSBFirst(PBYTE buffer, DWORD dwSize);
-	DWORD decodeMSBFirst(PBYTE buffer, DWORD dwSize);
-
-	// http://graphics.stanford.edu/~seander/bithacks.html#ReverseByteWith64BitsDiv
-	inline BYTE reverse(BYTE b) const
-	{
-		return ((b * 0x0202020202ULL & 0x010884422010ULL) % 1023) & 0xff;
-	}
 
 public:
 	CDSFDecoderKpi();

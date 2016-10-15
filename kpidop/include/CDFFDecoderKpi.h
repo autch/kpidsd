@@ -3,6 +3,7 @@
 #include "CDFFFile.h"
 #include "CAbstractFile.h"
 #include "CAbstractKpi.h"
+#include "DSD2DoP.h"
 
 #define SAMPLES_PER_BLOCK		(4096)
 
@@ -12,8 +13,7 @@ private:
 	CDFFFile file;
 	CAbstractFile* pFile;
 	KPI_MEDIAINFO mInfo;
-
-	BYTE last_marker;
+	DSD2DoP dsd2dop;
 
 	PBYTE srcBuffer;
 	DWORD srcBufferSize;

@@ -17,6 +17,7 @@ CWSDDecoderKpi::~CWSDDecoderKpi()
 void CWSDDecoderKpi::Close()
 {
 	file.Close();
+	dsd2dop.Close();
 	if (pFile != NULL) {
 		((CKpiFileAdapter*)pFile)->GetKpiFile()->Release();
 		delete pFile;
@@ -32,7 +33,7 @@ void CWSDDecoderKpi::Close()
 void CWSDDecoderKpi::Reset()
 {
 	file.Reset();
-	last_marker = DOP_MARKER1;
+	dsd2dop.Reset();
 }
 
 DWORD CWSDDecoderKpi::Open(const KPI_MEDIAINFO* pRequest, IKpiFile* kpiFile, IKpiFolder* folder)
@@ -85,6 +86,7 @@ DWORD CWSDDecoderKpi::Open(const KPI_MEDIAINFO* pRequest, IKpiFile* kpiFile, IKp
 			mInfo.dwUnitSample = SAMPLES_PER_BLOCK / 2;
 			break;
 		}
+		dsd2dop.Open(channels, mInfo.nBitsPerSample);
 	}
 
 	{
@@ -119,12 +121,8 @@ UINT64 WINAPI CWSDDecoderKpi::Seek(UINT64 qwPosSample, DWORD dwFlag)
 	bytePos *= mInfo.dwChannels;
 	bytePos >>= 3;
 
-	BYTE marker = last_marker;
-
 	Reset();
 	file.Seek(bytePos, NULL, FILE_CURRENT);
-
-	last_marker = marker;
 
 	return qwPosSample;
 }
@@ -133,50 +131,26 @@ DWORD CWSDDecoderKpi::Render(BYTE* buffer, DWORD dwSizeSample)
 {
 	DWORD dwBytesRead = 0;
 	DWORD dwSize = dwSizeSample * (mInfo.dwChannels * (mInfo.nBitsPerSample / 8));
-	PBYTE d = buffer, de = buffer + dwSize;
-	BYTE marker = last_marker;
-	BYTE frame[4] = { 0, 0, 0, 0 };
-	DWORD dwBytesToWrite, dwFrameOffset;
-	int channels = file.DataSpec()->channels;
-
-	if (mInfo.nBitsPerSample == 24)
-	{
-		dwBytesToWrite = 3;
-		dwFrameOffset = 1;
-	}
-	else
-	{
-		dwBytesToWrite = 4;
-		dwFrameOffset = 0;
-	}
+	PBYTE d = buffer;
+	DWORD totalSamplesWritten = 0, samplesWritten = 0;
+	DWORD dwSamplesToRender = dwSizeSample;
 
 	::ZeroMemory(buffer, dwSize);
-	while (d < de)
+	while (dwSamplesToRender > 0)
 	{
 		if (!file.Read(srcBuffer, srcBufferSize, &dwBytesRead))
 			break;
-		for (DWORD dwBytePos = 0; dwBytePos < dwBytesRead; dwBytePos += 2 * channels)
-		{
-			for (int ch = 0; ch < channels; ch++)
-			{
-				PBYTE p = srcBuffer + dwBytePos + ch;
-				PBYTE pp = srcBuffer + dwBytePos + channels + ch;
 
-				frame[3] = marker;
-				frame[2] = *p;
-				frame[1] = *pp;
-				memcpy(d, frame + dwFrameOffset, dwBytesToWrite);
-				d += dwBytesToWrite;
-			}
-			marker ^= 0xff;
-		}
+		samplesWritten = dsd2dop.Render(srcBuffer, dwBytesRead, 1, 0, d, dwSamplesToRender);
+		d += samplesWritten * mInfo.dwChannels * (mInfo.nBitsPerSample / 8);
+		totalSamplesWritten += samplesWritten;
+		dwSamplesToRender -= samplesWritten;
+
 		if (dwBytesRead < srcBufferSize)
 			break;
 	}
 
-	last_marker = marker;
-
-	return (DWORD)(d - buffer) / mInfo.dwChannels / (mInfo.nBitsPerSample / 8);
+	return totalSamplesWritten;
 }
 
 void trim(const wchar_t* szName, IKpiTagInfo* pInfo, uint8_t* buf, size_t size)

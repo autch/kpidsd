@@ -17,6 +17,7 @@ CDSFDecoderKpi::~CDSFDecoderKpi()
 void CDSFDecoderKpi::Close()
 {
 	file.Close();
+	dsd2dop.Close();
 	if (pFile != NULL) {
 		((CKpiFileAdapter*)pFile)->GetKpiFile()->Release();
 		delete pFile;
@@ -81,6 +82,7 @@ DWORD CDSFDecoderKpi::Open(const KPI_MEDIAINFO* pRequest, IKpiFile* kpiFile, IKp
 			mInfo.dwUnitSample = file.FmtHeader()->block_size_per_channel;
 			break;
 		}
+		dsd2dop.Open(channels, mInfo.nBitsPerSample);
 	}
 	else
 		mInfo.nBitsPerSample = 32;
@@ -110,8 +112,8 @@ fail_cleanup:
 void CDSFDecoderKpi::Reset()
 {
 	file.Reset();
+	dsd2dop.Reset();
 
-	last_marker = DOP_MARKER1;
 	samplesRendered = 0;
 }
 
@@ -123,8 +125,6 @@ UINT64 WINAPI CDSFDecoderKpi::Seek(UINT64 qwPosSample, DWORD dwFlag)
 
 	uint64_t blockPos = bytePos / file.FmtHeader()->block_size_per_channel;
 
-	BYTE marker = last_marker;
-
 	Reset();
 	file.Seek(blockPos * file.FmtHeader()->block_size_per_channel * file.FmtHeader()->channel_num, NULL, FILE_CURRENT);
 	samplesRendered = file.FmtHeader()->block_size_per_channel * 8 * blockPos;
@@ -134,7 +134,7 @@ UINT64 WINAPI CDSFDecoderKpi::Seek(UINT64 qwPosSample, DWORD dwFlag)
 	newPos <<= 3;
 	newPos /= 16;
 
-	last_marker = marker;
+	samplesRendered = blockPos * file.FmtHeader()->block_size_per_channel * 8;
 
 	return newPos;
 }
@@ -143,120 +143,33 @@ DWORD CDSFDecoderKpi::Render(BYTE* buffer, DWORD dwSizeSample)
 {
 	DWORD dwBytesRead = 0;
 	DWORD dwSize = dwSizeSample * (mInfo.dwChannels * (mInfo.nBitsPerSample / 8));
-	PBYTE d = buffer, de = buffer + dwSize;
+	PBYTE d = buffer;
 	uint64_t sampleCount = file.FmtHeader()->sample_count;
 	DWORD dwBytesPerBlockChannel = file.FmtHeader()->block_size_per_channel;
 	int bps = file.FmtHeader()->bits_per_sample;
-	DWORD dwBytesRendered = 0;
 	uint64_t dataEndPos = file.DataOffset() + file.DataHeader()->size - 12;
-	int channels = file.FmtHeader()->channel_num;
+	DWORD totalSamplesWritten = 0, samplesWritten = 0;
+	DWORD dwSamplesToRender = dwSizeSample;
 
 	::ZeroMemory(buffer, dwSize);
-	while (d < de)
+	while (dwSamplesToRender > 0 && samplesRendered < sampleCount)
 	{
 		if (file.Tell() >= dataEndPos) break;
 
-		file.Read(srcBuffer, dwBytesPerBlockChannel * channels, &dwBytesRead);
-		if (dwBytesRead < dwBytesPerBlockChannel * channels) break;
+		file.Read(srcBuffer, dwBytesPerBlockChannel * mInfo.dwChannels, &dwBytesRead);
+		if (dwBytesRead < dwBytesPerBlockChannel * mInfo.dwChannels) break;
 
-		switch (bps)
-		{
-		case DSF_BPS_LSB:
-			dwBytesRendered = decodeLSBFirst(d, (DWORD)(de - d));
-			break;
-		case DSF_BPS_MSB:
-			dwBytesRendered = decodeMSBFirst(d, (DWORD)(de - d));
-			break;
-		}
-		d += dwBytesRendered;
+		if (dwSamplesToRender * 16 > sampleCount - samplesRendered) {
+			dwSamplesToRender = (sampleCount - samplesRendered) / 16;
+ 		}
+
+		samplesWritten = dsd2dop.Render(srcBuffer, dwBytesRead, dwBytesPerBlockChannel, bps == DSF_BPS_LSB ? 1 : 0, d, dwSamplesToRender);
+		d += samplesWritten * mInfo.dwChannels * (mInfo.nBitsPerSample / 8);
+		totalSamplesWritten += samplesWritten;
+		dwSamplesToRender -= samplesWritten;
+		samplesRendered += samplesWritten * 16;
 	}
-	return (DWORD)(d - buffer) / mInfo.dwChannels / (mInfo.nBitsPerSample / 8);
-}
-
-// reverse() ‚Ì—v‚é‚â‚Â
-DWORD CDSFDecoderKpi::decodeLSBFirst(PBYTE buffer, DWORD dwSize)
-{
-	PBYTE d = buffer, de = buffer + dwSize;
-	DWORD dwBytesPerBlockChannel = file.FmtHeader()->block_size_per_channel;
-	uint64_t sampleCount = file.FmtHeader()->sample_count;
-	BYTE marker = last_marker;
-	BYTE frame[4] = { 0, 0, 0, 0 };
-	DWORD dwBytesToWrite, dwFrameOffset;
-	DWORD channels = file.FmtHeader()->channel_num;
-	
-	if (mInfo.nBitsPerSample == 24)
-	{
-		dwBytesToWrite = 3;
-		dwFrameOffset = 1;
-	}
-	else
-	{
-		dwBytesToWrite = 4;
-		dwFrameOffset = 0;
-	}
-
-	for (DWORD dwByteOffset = 0;
-		dwByteOffset < dwBytesPerBlockChannel && samplesRendered < sampleCount;
-		dwByteOffset += DOP_DSD_BYTES_PER_FRAME)
-	{
-		for (unsigned ch = 0; ch < channels; ch++)
-		{
-			PBYTE p = srcBuffer + (dwBytesPerBlockChannel * ch) + dwByteOffset;
-
-			frame[3] = marker;
-			frame[2] = reverse(*p++);
-			frame[1] = reverse(*p++);
-			memcpy(d, frame + dwFrameOffset, dwBytesToWrite);
-			d += dwBytesToWrite;
-		}
-		marker ^= 0xff;
-		samplesRendered += 16;
-	}
-	last_marker = marker;
-	return (DWORD)(d - buffer);
-}
-
-// reverse() ‚Ì—v‚ç‚È‚¢‚â‚Â
-DWORD CDSFDecoderKpi::decodeMSBFirst(PBYTE buffer, DWORD dwSize)
-{
-	PBYTE d = buffer, de = buffer + dwSize;
-	DWORD dwBytesPerBlockChannel = file.FmtHeader()->block_size_per_channel;
-	uint64_t sampleCount = file.FmtHeader()->sample_count;
-	BYTE marker = last_marker;
-	BYTE frame[4] = { 0, 0, 0, 0 };
-	DWORD dwBytesToWrite, dwFrameOffset;
-	DWORD channels = file.FmtHeader()->channel_num;
-
-	if (mInfo.nBitsPerSample == 24)
-	{
-		dwBytesToWrite = 3;
-		dwFrameOffset = 1;
-	}
-	else
-	{
-		dwBytesToWrite = 4;
-		dwFrameOffset = 0;
-	}
-
-	for (DWORD dwByteOffset = 0;
-		dwByteOffset < dwBytesPerBlockChannel && samplesRendered < sampleCount;
-		dwByteOffset += DOP_DSD_BYTES_PER_FRAME)
-	{
-		for (unsigned ch = 0; ch < channels; ch++)
-		{
-			PBYTE p = srcBuffer + (dwBytesPerBlockChannel * ch) + dwByteOffset;
-
-			frame[3] = marker;
-			frame[2] = *p++;
-			frame[1] = *p++;
-			memcpy(d, frame + dwFrameOffset, dwBytesToWrite);
-			d += dwBytesToWrite;
-		}
-		marker ^= 0xff;
-		samplesRendered += 16;
-	}
-	last_marker = marker;
-	return (DWORD)(d - buffer);
+	return totalSamplesWritten;
 }
 
 DWORD CDSFDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, IKpiTagInfo* pTagInfo, DWORD dwTagGetFlags)

@@ -45,6 +45,7 @@ DWORD CDFFDecoderKpi::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, 
 void CDFFDecoderKpi::Close()
 {
 	file.Close();
+	dsd2dop.Close();
 	if (pFile != NULL) {
 		((CKpiFileAdapter*)pFile)->GetKpiFile()->Release();
 		delete pFile;
@@ -64,12 +65,8 @@ UINT64 CDFFDecoderKpi::Seek(UINT64 qwPosSample, DWORD dwFlag)
 	bytePos *= file.FRM8().prop.chnl.data.numChannels;
 	bytePos >>= 3;
 
-	BYTE marker = last_marker;
-
 	Reset();
 	file.Seek(bytePos, NULL, FILE_CURRENT);
-
-	last_marker = marker;
 
 	return qwPosSample;
 }
@@ -77,9 +74,8 @@ UINT64 CDFFDecoderKpi::Seek(UINT64 qwPosSample, DWORD dwFlag)
 void CDFFDecoderKpi::Reset()
 {
 	file.Reset();
-	last_marker = DOP_MARKER1;
+	dsd2dop.Reset();
 }
-
 
 DWORD CDFFDecoderKpi::Open(const KPI_MEDIAINFO* pRequest, IKpiFile* kpiFile, IKpiFolder* folder)
 {
@@ -136,6 +132,7 @@ DWORD CDFFDecoderKpi::Open(const KPI_MEDIAINFO* pRequest, IKpiFile* kpiFile, IKp
 			mInfo.nBitsPerSample = 32;
 			break;
 		}
+		dsd2dop.Open(channels, mInfo.nBitsPerSample);
 	}
 	else
 		mInfo.nBitsPerSample = 32;
@@ -172,26 +169,13 @@ DWORD CDFFDecoderKpi::Render(BYTE* buffer, DWORD dwSizeSample)
 {
 	DWORD dwBytesRead = 0;
 	DWORD dwSize = dwSizeSample * (mInfo.dwChannels * (mInfo.nBitsPerSample / 8));
-	PBYTE d = buffer, de = buffer + dwSize;
-	BYTE marker = last_marker;
-	BYTE frame[4] = { 0, 0, 0, 0 };
-	DWORD dwBytesToWrite, dwFrameOffset;
-	int channels = file.FRM8().prop.chnl.data.numChannels;
+	PBYTE d = buffer;
 	uint64_t dsdEndPos = file.FRM8().dsd.OffsetToData() + file.FRM8().dsd.DataSize();
-
-	if (mInfo.nBitsPerSample == 24)
-	{
-		dwBytesToWrite = 3;
-		dwFrameOffset = 1;
-	}
-	else
-	{
-		dwBytesToWrite = 4;
-		dwFrameOffset = 0;
-	}
+	DWORD totalSamplesWritten = 0, samplesWritten = 0;
+	DWORD dwSamplesToRender = dwSizeSample;
 
 	::ZeroMemory(buffer, dwSize);
-	while (d < de) {
+	while (dwSamplesToRender > 0) {
 		DWORD dwBytesToRead = srcBufferSize;
 
 		if (file.Tell() >= dsdEndPos) break;
@@ -201,26 +185,15 @@ DWORD CDFFDecoderKpi::Render(BYTE* buffer, DWORD dwSizeSample)
 
 		if (!file.Read(srcBuffer, dwBytesToRead, &dwBytesRead))
 			break;
-		for (DWORD dwBytePos = 0; dwBytePos < dwBytesRead; dwBytePos += 2 * channels)
-		{
-			for (int ch = 0; ch < channels; ch++)
-			{
-				PBYTE p = srcBuffer + dwBytePos + ch;
-				PBYTE pp = srcBuffer + dwBytePos + channels + ch;
 
-				frame[3] = marker;
-				frame[2] = *p;
-				frame[1] = *pp;
-				memcpy(d, frame + dwFrameOffset, dwBytesToWrite);
-				d += dwBytesToWrite;
-			}
-			marker ^= 0xff;
-		}
+		samplesWritten = dsd2dop.Render(srcBuffer, dwBytesRead, 1, 0, d, dwSamplesToRender);
+		d += samplesWritten * mInfo.dwChannels * (mInfo.nBitsPerSample / 8);
+		totalSamplesWritten += samplesWritten;
+		dwSamplesToRender -= samplesWritten;
+
 		if (dwBytesRead < srcBufferSize)
 			break;
 	}
 
-	last_marker = marker;
-
-	return (DWORD)(d - buffer) / mInfo.dwChannels / (mInfo.nBitsPerSample / 8);
+	return totalSamplesWritten;
 }

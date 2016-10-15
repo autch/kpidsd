@@ -11,7 +11,7 @@ static const GUID kpidop_GUID =
 { 0xffb4ed1d, 0xf6c7, 0x433c,{ 0x8c, 0x7d, 0xd6, 0x30, 0x24, 0xc0, 0xb6, 0xbe } };
 
 #define MAKE_SEMVER(major, minor, patch)	(((major) << 16) | ((minor) << 8) | (patch))
-#define KPI_VERSION		MAKE_SEMVER(2, 0, 0)
+#define KPI_VERSION		MAKE_SEMVER(2, 0, 1)
 
 #ifdef _DEBUG
 #define DEBUG_MSG		L" [DEBUG]"
