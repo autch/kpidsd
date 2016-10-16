@@ -1,10 +1,6 @@
 
 ZIPNAME=kpidop_$(shell date +%Y%m%d%H%M).zip
 
-FILES=../Release/kpidop.kpi \
-	COPYING \
-	kpidop.txt
-
 zip:
 	mkdir -p kpidop/{x86,x64}
 	cp ../Release/kpidop.kpi kpidop/x86/
