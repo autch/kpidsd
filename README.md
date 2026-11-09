@@ -114,6 +114,8 @@ Python 3 が要る。fixtures.py は kpi-render を CPU のスレッド数だけ
   反転させたファイルの差から FIR のインパルス応答を取り出し、周波数特性 (直流、通過域のリップル、
   阻止域の減衰) を測る。2 次の ΔΣ 変調で作った 997Hz のサイン波の SINAD を、同じ区間を理想的な
   フィルタで切った場合と比べる (変調器の雑音で決まるので、同じになればよい)
+- `fuzz-smoke` — 合成したファイルを決まった乱数で壊した 600 個 (ビット反転、長さの欄を極端な値に、途中で切る、
+  チャンクの複製など) を kpi-render に渡し、落ちたり (終了コードが 0 / 1 以外)、60 秒で終わらなかったりしないことを確かめる
 - `seek-check-data` — `-DKPIDSD_TEST_DATA=<ディレクトリ>` を指定したときだけ、その下にある
   DSF / DSDIFF / WSD をすべて seek-check する
 
@@ -129,6 +131,30 @@ kpi-render [-k PLUGIN] [-r RATE] [-b BITS] --seek-check file...
 (`cpRequest` の `dwSampleRate` / `nBitsPerSample`、既定は 0 / -64)。
 
 KbMedia Player 本体での確認 (認識、再生、シーク、タグの表示、DoP の DAC での再生) は別に行う。
+
+### 壊れたファイル・細工されたファイル
+
+本体は Media エクスプローラでファイルを表示するだけでもプラグインを呼ぶので、壊れたファイルや細工された
+ファイルで落ちたり、メモリや時間を使いすぎたりしないようにしている。
+
+- チャンクやヘッダの長さは、ファイルの大きさを超えないように切り詰める。DSDIFF は 10000 チャンクで読むのをやめる
+- 文字列は 1 つ 64KiB まで、DSDIFF のコメントは 16 個まで覚える。チャンネル数は 16 まで、DSF のブロック長は 1MiB まで
+- 長さの決まったチャンクも、宣言された長さの終わりまで読み飛ばす (後ろのチャンクがずれない)
+- 大きさの分からない IKpiFile (`GetSize()` が `KPI_FILE_EOF`) は開かない
+- C++ の例外はインターフェースの外に出さない
+
+libFuzzer と AddressSanitizer でも確かめられる (MSVC のみ。配布用とは別のビルドディレクトリで)。
+
+```
+cmake -S . -B build-fuzz -G "Visual Studio 18 2026" -A x64 -DKPIDSD_FUZZ=ON
+cmake --build build-fuzz --config Release
+build-fuzz/bin/Release/fuzz-decoder.exe -max_len=65536 -max_total_time=300 -jobs=16 -workers=16 corpus
+```
+
+`corpus` には `make-fixtures` が作った DSF / DSDIFF / WSD を入れておく。vcvars を通した環境で実行する
+(ASan の DLL を見つけるため)。fuzz-decoder はデコーダーのソースを直接リンクし、タグ取得用の Open と、
+kpidop / kpid2p のデコード用の Open、Select、いろいろな位置への Seek と Render を行う。
+2026-11-10 に 16 並列で 5 分 (約 92 万回) 回して、問題は出なかった。
 
 ## 配布
 

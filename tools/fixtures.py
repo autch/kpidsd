@@ -7,6 +7,7 @@ usage: fixtures.py generate DIR
        fixtures.py seek-check DIR --cli KPI_RENDER [--emulator WINE]
        fixtures.py check-d2p DIR --cli KPI_RENDER [--emulator WINE]
        fixtures.py seek-check-data DATADIR --cli KPI_RENDER [--emulator WINE]
+       fixtures.py fuzz-smoke DIR --cli KPI_RENDER [--emulator WINE] [--count N] [--seed N]
 
 generate は DSF / DSDIFF / WSD を DIR に書き、各ファイルの正解 (チャンネルごとの DSD のバイト列、
 タグ) を DIR/expect.json と DIR/*.planar に書く。DSD の中身は乱数で、音にはなっていない。
@@ -17,6 +18,7 @@ check-d2p は kpid2p の出力の周波数を確かめ、ビットを 1 つず�
 FIR のインパルス応答を取り出して周波数特性を測る。ΔΣ 変調したサイン波の SINAD も測る。
 numpy が要る (なければ終了コード 77 で飛ばす)。
 seek-check-data は DATADIR の下の .dsf / .dff / .wsd をすべて seek-check する。
+fuzz-smoke は合成したファイルを決まった乱数で壊し、kpi-render が落ちたり止まったりしないことを確かめる。
 """
 
 import argparse
@@ -216,8 +218,8 @@ class Cli:
     def __init__(self, args):
         self.cmd = ([args.emulator] if args.emulator else []) + [args.cli]
 
-    def run(self, plugin, *args, check=True):
-        result = subprocess.run(self.cmd + ["-k", plugin] + list(args), capture_output=True)
+    def run(self, plugin, *args, check=True, timeout=None):
+        result = subprocess.run(self.cmd + ["-k", plugin] + list(args), capture_output=True, timeout=timeout)
         if check and result.returncode != 0:
             raise RuntimeError(f"kpi-render {' '.join(args)} failed: {result.stderr.decode(errors='replace')}")
         return result
@@ -540,14 +542,94 @@ def check_d2p(args):
     return 1 if fails else 0
 
 
+# --- 壊れたファイル ---
+
+def mutate(rng, data):
+    """ヘッダの近くを中心に壊す。長さの欄によく出る値も入れる"""
+    if len(data) < 8:
+        return data + bytes(rng.getrandbits(8) for _ in range(rng.randint(0, 64)))
+    data = bytearray(data)
+    head = min(len(data), 4096)
+    kind = rng.randrange(6)
+    if kind == 0:  # ビットを反転させる
+        for _ in range(rng.randint(1, 8)):
+            i = rng.randrange(head)
+            data[i] ^= 1 << rng.randrange(8)
+    elif kind == 1:  # 4 / 8 バイトの欄を極端な値にする
+        i = rng.randrange(max(1, head - 8))
+        width = rng.choice((2, 4, 8))
+        value = rng.choice((0, 1, 0x7F, 0xFF, 0x7FFFFFFF, 0xFFFFFFFF, (1 << 63) - 1, (1 << 64) - 1,
+                            len(data), len(data) + 1, len(data) - 1, rng.getrandbits(64)))
+        data[i:i + width] = (value & ((1 << (8 * width)) - 1)).to_bytes(width, rng.choice(("little", "big")))
+    elif kind == 2:  # 途中で切る
+        del data[rng.randrange(len(data) + 1):]
+    elif kind == 3:  # 一部を乱数にする
+        i = rng.randrange(head)
+        n = rng.randint(1, 64)
+        data[i:i + n] = bytes(rng.getrandbits(8) for _ in range(n))
+    elif kind == 4:  # チャンクを複製・挿入する
+        i, j = sorted(rng.randrange(len(data) + 1) for _ in range(2))
+        k = rng.randrange(len(data) + 1)
+        data[k:k] = data[i:min(j, i + 4096)]
+    else:  # 先頭の 4 バイト以外をすべて同じ値にする
+        fill = rng.choice((0, 0xFF))
+        data[4:head] = bytes([fill]) * (head - 4)
+    return bytes(data)
+
+
+def fuzz_smoke(args):
+    """合成したファイルを決まった乱数で壊して kpi-render に渡し、落ちたり止まったりしないことを確かめる。
+    kpi-render が返してよいのは 0 (開けた) か 1 (開けなかった) だけ"""
+    expect, invalid = load(args.dir)
+    cli = Cli(args)
+    work = os.path.join(args.dir, "broken")
+    os.makedirs(work, exist_ok=True)
+    rng = random.Random(args.seed)
+    sources = sorted(list(expect) + invalid)
+    cases = []
+    for i in range(args.count):
+        name = sources[i % len(sources)]
+        with open(os.path.join(args.dir, name), "rb") as f:
+            data = f.read()
+        for _ in range(rng.randint(1, 3)):
+            data = mutate(rng, data)
+        path = os.path.join(work, f"{i:04d}_{name}")
+        with open(path, "wb") as f:
+            f.write(data)
+        cases.append(path)
+
+    runs = [("kpidop.kpi", ["--info"]), ("kpidop.kpi", ["--tag-only", "--info"]), ("kpidop.kpi", ["-n", "50000"]),
+            ("kpid2p.kpi", ["-n", "20000"]), ("kpid2p.kpi", ["-r", "352800", "-b", "-32", "-n", "20000"]),
+            ("kpidop.kpi", ["--seek-check"])]
+
+    def check(path):
+        lines = []
+        for plugin, opts in runs:
+            try:
+                result = cli.run(plugin, *opts, path, check=False, timeout=60)
+            except subprocess.TimeoutExpired:
+                lines.append(f"{os.path.basename(path)}: {plugin} {' '.join(opts)} timed out")
+                continue
+            # --seek-check は内容が食い違うと 1 を返す (壊れたファイルでは食い違ってもよい)
+            if result.returncode not in (0, 1):
+                lines.append(f"{os.path.basename(path)}: {plugin} {' '.join(opts)} exited with {result.returncode:#x}")
+        return lines, len(lines)
+
+    ret = parallel(args, check, cases)
+    print(f"{len(cases)} broken files x {len(runs)} runs: {'NG' if ret else 'ok'}")
+    return ret
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=["generate", "check-dop", "check-tags", "seek-check", "check-d2p", "seek-check-data"])
+    parser.add_argument("command", choices=["generate", "check-dop", "check-tags", "seek-check", "check-d2p", "seek-check-data", "fuzz-smoke"])
     parser.add_argument("dir")
     parser.add_argument("--cli")
     parser.add_argument("--emulator")
     parser.add_argument("-j", "--jobs", type=int, default=os.cpu_count() or 1,
                         help="kpi-render を同時に走らせる数 (既定は CPU のスレッド数)")
+    parser.add_argument("--count", type=int, default=600, help="fuzz-smoke で作る壊れたファイルの数")
+    parser.add_argument("--seed", type=int, default=20261110, help="fuzz-smoke の乱数の種")
     args = parser.parse_args()
     if args.command == "generate":
         generate(args.dir)
@@ -555,7 +637,7 @@ def main():
     if not args.cli:
         parser.error("--cli is required")
     return {"check-dop": check_dop, "check-tags": check_tags, "seek-check": seek_check,
-            "check-d2p": check_d2p, "seek-check-data": seek_check_data}[args.command](args)
+            "check-d2p": check_d2p, "seek-check-data": seek_check_data, "fuzz-smoke": fuzz_smoke}[args.command](args)
 
 
 if __name__ == "__main__":
