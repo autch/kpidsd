@@ -1,127 +1,162 @@
-kpid2p.kpi
+﻿kpid2p.kpi
 ==========
 
-DSD (Direct Stream Digital) ������ PCM �ɕϊ����čĐ����邽�߂� KbMedia 
-Player �v���O�C���ł��B�Ή�����g���q�� dsf, dff, wsd �ł��B
+DSD (Direct Stream Digital) 音源を PCM に変換して再生するための KbMedia
+Player プラグインです。対応する拡張子は dsf, dff, wsd です。
 
-KbMedia Player 2.80beta29 �ȍ~���K�v�ł��B
+KbMedia Player 2.80beta29 以降のプラグイン仕様に対応しています。
 
-���̃v���O�C���� DSD �t�@�C���t�H�[�}�b�g�̎����� kpidop.kpi �Ƌ��L����
-���܂��B���̂��߁A�t�@�C���t�H�[�}�b�g��^�O�`���T�|�[�g�̏󋵂� 
-kpidop.kpi �Ƌ��ʂł��B
+このプラグインは DSD ファイルフォーマットの実装を kpidop.kpi と共有して
+います。このため、ファイルフォーマットやタグ形式サポートの状況は
+kpidop.kpi と共通です。
 
 
-DSD -> PCM �ϊ�
+DSD -> PCM 変換
 ---------------
 
-dsd2pcm �ɂ���� 8:1 �ϊ����s������ASoX Resampler �ɂ���ăI�[�f�B�I�f
-�o�C�X���T�|�[�g����T���v�����O���[�g�܂Ń_�E���T���v�����O���Ă��܂��B
+1 段の FIR フィルタで DSD を間引いて、直接 PCM にします。出力のサンプリ
+ング周波数は DSD のサンプリング周波数を 2 のべき乗 (8〜128) で割ったもの
+で、別のリサンプラーは通しません。
 
-���Ƃ��� 2.8MHz �� DSD64 �Ȃ�A�ȉ��̂悤�ɕϊ����Ă��܂��B
+たとえば 2.8MHz の DSD64 なら、以下のようになります。
 
-DSD 1bit 2.8MHz
--(DSD2PCM)-> PCM 32bit float 352.8kHz
--(SoXr)-> PCM 16/24/32bit int 44.1/48/96kHz
+DSD 1bit 2.8224MHz
+-(FIR)-> PCM 64bit float 44.1/88.2/176.4/352.8kHz
+
+・出力のサンプリング周波数は、本体から要求された周波数に一番近いものを、
+  44.1kHz 以上 384kHz 以下から選びます。要求がなければ 88.2kHz です。
+  44.1kHz 系の DSD からは 44.1kHz 系の、48kHz 系の DSD からは 48kHz 系の
+  周波数になります。間引き率は 128 までなので、DSD256 では 88.2kHz
+  (96kHz) 以上、DSD512 では 176.4kHz (192kHz) 以上になります。
+・ASIO/WASAPI (排他モード) では、デバイスがその周波数で鳴らせないとエラー
+  になることがあります。waveOut/DirectSound では、Windows が周波数を変換
+  します。
+・出力は浮動小数点 (本体から 32bit float を要求されたときは 32bit、それ
+  以外は 64bit float) です。整数への変換やディザは本体に任せます。
+・ゲインは 1 倍 (DSD のビットがすべて 1 のとき +1.0) です。
+
+フィルタはカイザー窓をかけた sinc で、起動時に作ります。
+
+・通過域: 20kHz (44.1kHz 出力のとき) または 30kHz (88.2kHz 以上の出力の
+  とき) まで。リップルは 0.0001dB 未満
+・出力のナイキスト周波数 (44.1kHz 出力なら 22.05kHz) で -6dB
+・阻止域: 出力の周波数から通過域の端を引いた周波数 (44.1kHz 出力なら
+  24.1kHz、88.2kHz 出力なら 58.2kHz) より上を約 119dB 減衰
+・ナイキスト周波数から阻止域の端までの成分は、通過域より上 (44.1kHz 出力
+  なら 20kHz〜22.05kHz) に折り返します。通過域には入りません。
+・直線位相です。PCM のサンプル k は DSD の k × (間引き率) サンプル目を中
+  心に計算するので、出力の頭が遅れたり欠けたりしません。曲の前後は DSD の
+  無音パターン (0x69) とみなします。
 
 
-�Ή��t�@�C���t�H�[�}�b�g
+対応ファイルフォーマット
 ------------------------
 
-�ȉ��̃t�@�C���t�H�[�}�b�g�ƃo�[�W�����ɑΉ����܂��B
+以下のファイルフォーマットとバージョンに対応します。
 
-�E�\�j�[ DSF v1.01
-�E�t�B���b�v�X DSDIFF v1.5
-�E1bit �I�[�f�B�I�R���\�[�V�A�� WSD v1.1
+・ソニー DSF v1.01
+・フィリップス DSDIFF v1.5
+・1bit オーディオコンソーシアム WSD v1.1
 
-DSDIFF �t�H�[�}�b�g�ɂ����� DST (Direct Stream Transfer) �R�[�f�b�N�ɂ�
-�Ή����Ă��Ȃ����߁ASACD ����z���o���������̍Đ��͂ł��܂���B
+DSD のサンプリング周波数は、44.1kHz 系 (2.8224MHz、5.6448MHz、…) と 48kHz
+系 (3.072MHz、6.144MHz、…) のそれぞれ 64 倍から 1024 倍までを受け付けま
+す。
 
-�ȉ��̕��@�œ��肵���t�@�C���t�H�[�}�b�g�œ���m�F���Ă��܂��B
+DSDIFF フォーマットにおける DST (Direct Stream Transfer) コーデックには
+対応していないため、SACD から吸い出した音源の再生はできません。
 
-- KORG AudioGate v3.0.2, v4.0.2 �Ő������� DSF/DSDIFF/WSD �t�@�C��
-- http://www.2l.no/hires/ �Ń_�E�����[�h�ł��� DSDIFF, DSF �t�@�C��
-- e-onkyo music �ōw������ DSF �t�@�C��
-- 1bit �I�[�f�B�I�R���\�[�V�A�������T�C�g�� WSD �t�@�C��
+以下の方法で入手したファイルフォーマットで動作確認しています。
+
+- KORG AudioGate v3.0.2, v4.0.2 で生成した DSF/DSDIFF/WSD ファイル
+- http://www.2l.no/hires/ でダウンロードできる DSDIFF, DSF ファイル
+- e-onkyo music で購入した DSF ファイル
+- 1bit オーディオコンソーシアム公式サイトの WSD ファイル
 
 
-�Ή� OS
+対応 OS
 -------
 
-64bit �t�@�C�� API ���g�p���邽�߁AWindows 2000 �ȍ~���K�v�ł��B�����J�[
-�̐ݒ��� Windows XP �ȍ~�ɑΉ�����Ɛݒ肵�ăr���h���Ă��܂����A
-Windows 7 / 8.1 / 10 �ȊO�ł͊m�F���Ă��܂���B
+Windows 10 以降。Visual Studio 2026 の VC++ ランタイム (VC++ 再頒布可能パ
+ッケージ) が必要です。KbMedia Player 本体付属のプラグインと同じです。
 
 
-�^�O���ɂ���
+シークについて
+--------------
+
+シークはサンプル単位で正確に行います。シークした位置から再生しても、先頭
+から再生したときと同じ PCM になります。
+
+
+タグ情報について
 ----------------
 
-DSF �� ID3v2 �^�O�� KbMedia Player 2.80beta23 �ȍ~�̖{�̂��Ή�����悤��
-�Ȃ�܂����B���̂��߃t���[�����Ȃǂ̉��߂͖{�̂̎����ɏ����܂��B
+DSF の ID3v2 タグは、KbMedia Player 本体が解析します。そのためフレーム
+名などの解釈は本体の実装に準じます。
 
-ID3v2 �^�O�̓���m�F�ɂ́AKORG AudioGate �Ő�������� DSF �� e-onkyo 
-music �ōw������ DSF ���g���Ă��܂��B
+DSDIFF に非公式の ID3 チャンク (FRM8 直下の "ID3 " チャンク) があれば、
+その中の ID3v2 タグを DSF と同じく本体が解析します。このとき、次の DIIN
+と COMT チャンクは使いません。
 
-DSDIFF �ł́AEdited Master Information �`�����N�ɂ��� DITI �� DIAR �`��
-���N���A���ꂼ��^�C�g���ƃA�[�e�B�X�g�ɑΉ����܂��BCOMT �`�����N������
-�΁A���̒��̍ŏ��̂��̂��R�����g�Ƃ��Ďg���܂��B
+ID3 チャンクがなければ、Edited Master Information (DIIN) チャンクにある
+DITI と DIAR チャンクが、それぞれタイトルとアーティストに対応します。
+COMT チャンクがあれば、その中の最初のものがコメントとして使われます。
+DSDIFF の仕様に文字コードの規定がないので、UTF-8 として正しければ UTF-8
+として、そうでなければ Shift_JIS として解釈します。
 
-DSDIFF �̎d�l�ɕ����R�[�h�̋K�肪�Ȃ��̂ŁA����炪�������܂ނƂ��̓^�O
-��񎩑̂��L�^����Ă��Ȃ����Ƃ�����܂��B��������Ζ{�v���O�C���Ƃ��Ă� 
-Shift_JIS �Ƃ��ĉ��߂��܂��B
+WSD では、タイトル、アーティスト、アルバム、作曲者、ジャンル、コメント、
+日時に対応します。WSD v1.1 の仕様には文字コードの規定がないので、
+Shift_JIS として解釈します。
 
-WSD �ł́A�^�C�g���A�A�[�e�B�X�g�A�A���o���A�W�������A�R�����g�A�����ɑ�
-�����܂��BWSD v1.1 �̎d�l�ɂ͕����R�[�h�̋K�肪�Ȃ��̂ŁA����炪������
-�܂ނƂ��̓^�O��񎩑̂��L�^����Ă��Ȃ����Ƃ�����܂��B��������Ζ{�v��
-�O�C���Ƃ��Ă� Shift_JIS �Ƃ��ĉ��߂��܂��B
+KORG AudioGate は、DSDIFF と WSD のタグに漢字などが含まれるとタグ情報自
+体を記録しません。このため、DSDIFF の ID3 チャンクと、漢字などを含む
+DSDIFF と WSD のタグは、テスト用に合成したファイルでしか確認していませ
+ん。
+
+ビットレートは kpidop.kpi と同じく、DSD のチャンネルあたりのビットレー
+ト (DSD64 なら 2.822Mbps) を表示します。
 
 
-���C�Z���X
+ライセンス
 ----------
 
 kpid2p.kpi - DSD to PCM plugin for KbMedia Player
- Copyright (c) 2016, Autch.net.
+ Copyright (c) 2016-2026, Autch.net.
 
-dsd2pcm - https://code.google.com/archive/p/dsd2pcm/
- Copyright 2009, 2011 Sebastian Gesemann. All rights reserved.
+kpid2p.kpi は MIT ライセンスで配布されます。COPYING ファイルをご覧くださ
+い。
 
-SoX Resampler Library - http://soxr.sourceforge.net/
- Copyright (c) 2007-13 robs@users.sourceforge.net
-
-
-kpid2p.kpi �͈ȉ��� 2 �̃\�t�g�E�F�A�𗘗p���Ă��܂��B
-
-8:1 �f�V���[�V�����t�B���^�� 16bit �o�͗p�m�C�Y�V�F�C�p�[�Ƃ��� dsd2pcm 
-(https://code.google.com/archive/p/dsd2pcm/) ���g�p���Ă��܂��B�{�v���O
-�C���̃\�[�X�ł� kpid2p/include/Downsampler.h �� Noiseshaper.h ��������
-�܂��B
-���C�Z���X�� 2 ���� BSD ���C�Z���X�ł��BCOPYING.dsd2pcm �t�@�C����������
-�������B
-
-�T���v�����O���[�g�ϊ��� SoX Resampler (http://soxr.sourceforge.net/) ��
-���C���Ŏg�p���Ă��܂��B�{�v���O�C���̃\�[�X�ł� libsoxr �v���W�F�N�g��
-���ɑ������܂��B
-���C�Z���X�� LGPL v2.1 �ȍ~�ł��BLICENSE.soxr �� COPYING.LGPL �t�@�C����
-�������������B
-
-kpid2p.kpi �̏�L�ȊO�̕����ɂ��Ă� MIT ���C�Z���X�ł��BCOPYING �t�@�C
-�����������������B
+v1.0.0 で使っていた dsd2pcm と SoX Resampler は、v2.0.0 から使っていませ
+ん。
 
 
-�\�[�X�R�[�h
+ソースコード
 ------------
 
-�\�[�X�R�[�h�͈ȉ��� GitHub ���|�W�g���������ł��܂��B
+ソースコードは以下の GitHub リポジトリから入手できます。
 https://github.com/autch/kpidsd
 
-Visual Studio 2015 Community �Ńr���h���Ă��܂��B
+Visual Studio 2026 でビルドしています。
 
 
-����
+履歴
 ----
 
 v1.0.0 (65536)
-        ���ŁBKbMedia Player 2.80beta30 �ȍ~�p
+        初版。KbMedia Player 2.80beta30 以降用
 
+v2.0.0 (131072)
+        KbMedia Player 3.17beta3 のプラグイン SDK でビルドし直した
+        Visual Studio 2026 ランタイムに依存するように修正
+        DSD -> PCM 変換を作り直した
+        - dsd2pcm (8:1) と SoX Resampler の 2 段をやめ、1 段の FIR で
+          間引くようにした (SoX Resampler の LGPL もなくなった)
+        - 出力を浮動小数点にした (16bit 出力のノイズシェーピングはやめた)
+        - 出力の周波数は 44.1kHz 系 (48kHz 系の DSD では 48kHz 系) だけに
+          なった。要求がないときは 88.2kHz
+        サンプル単位で正確にシークするようにした
+        48kHz 系の DSD に対応
+        ビットレートの表示を、出力の PCM のものから DSD のものに変えた
+        タグ情報の変更は kpidop.kpi v2.1.0 と同じ
 
 ----
 Autch

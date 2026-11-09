@@ -17,6 +17,7 @@
 [Rr]eleases/
 x64/
 x86/
+[Ww][Ii][Nn]32/
 bld/
 [Bb]in/
 [Oo]bj/
@@ -305,9 +306,15 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-kpidop/kpidop_*.zip
-kpidop/kpidop/
-kpid2p/kpid2p_*.zip
-kpid2p/kpid2p/
-kpidsd/kpidsd_*.zip
-kpidsd/kpidsd/
+# CMake のビルドディレクトリ
+build*/
+
+# Python
+__pycache__/
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json

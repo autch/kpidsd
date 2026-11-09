@@ -1,8 +1,15 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
-# Custom for Visual Studio
-*.cs     diff=csharp
+# KbMedia Player のビューアで読めるように UTF-8 (BOM 付き) / CRLF のまま置く (改行を変換しない)
+kpidop/kpidop.txt -text
+kpid2p/kpid2p.txt -text
+# SDK のヘッダは原本のまま (UTF-8 BOM 付き / CRLF) 置く
+kpisdk/*.h -text
+
+# Visual Studio のファイルは CRLF
+*.sln text eol=crlf
+*.vcxproj text eol=crlf
 
 # Standard to msysgit
 *.doc	 diff=astextplain
