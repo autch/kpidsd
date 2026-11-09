@@ -1,4 +1,2 @@
-LIBRARY	kpidop.kpi
-
 EXPORTS
 	kpi_CreateInstance
