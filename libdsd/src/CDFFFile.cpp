@@ -1,6 +1,15 @@
 #include "stdafx.h"
 #include "CDFFFile.h"
 
+namespace
+{
+	// 壊れたファイルや細工されたファイルで、メモリや時間を使いすぎないための上限
+	constexpr size_t MaxChunks = 10000;			// 正しいファイルのチャンクは数十個
+	constexpr uint32_t MaxTextBytes = 65536;		// 1 つの文字列の長さ
+	constexpr size_t MaxComments = 16;				// 覚えておくコメントの数 (使うのは最初の 1 つ)
+	constexpr uint16_t MaxChannelIDs = 256;
+}
+
 CDFFFile::CDFFFile() : CLargeFile(), frm8()
 {
 
@@ -44,7 +53,8 @@ BOOL CDFFFile::Open(CAbstractFile* file)
 
 	hFile = file;
 
-	while (readChunkHeader(hdr, step))
+	size_t chunks = 0;
+	while (chunks++ < MaxChunks && readChunkHeader(hdr, step))
 	{
 		// 終わった親チャンク (PROP、DIIN など) から抜ける
 		while (!stack.empty() && stack.top().dataEndOffset <= step.headerOffset)
@@ -91,6 +101,7 @@ bool CDFFFile::readFRM8(ChunkStep& step, DFFChunkHeader& hdr)
 	{
 		Read(&frm8.fver.data, sizeof frm8.fver.data, NULL);
 		frm8.fver.setupData();
+		Seek(step.dataEndOffset, NULL, FILE_BEGIN);
 		stack.pop(); // ascend to parent (FRM8) chunk
 		break;
 	}
@@ -112,10 +123,23 @@ bool CDFFFile::readFRM8(ChunkStep& step, DFFChunkHeader& hdr)
 		{
 			Comment comment;
 
-			Read(&comment.data, sizeof comment.data, NULL);
+			DWORD bytesRead = 0;
+			if (!Read(&comment.data, sizeof comment.data, &bytesRead) || bytesRead != sizeof comment.data)
+				break;
 			comment.setupData();
+			if (frm8.comt.comments.size() >= MaxComments)
+			{
+				// 残りは読み飛ばす
+				const uint64_t pos = Tell();
+				if (comment.data.count >= step.dataEndOffset - std::min(pos, step.dataEndOffset))
+					break;
+				Seek(pos + comment.data.count, NULL, FILE_BEGIN);
+				continue;
+			}
+			const uint64_t textEnd = std::min(Tell() + comment.data.count, step.dataEndOffset);
 			assignBuffer(comment.data.count, step.dataEndOffset, comment.commentText);
 			frm8.comt.comments.push_back(comment);
+			Seek(textEnd, NULL, FILE_BEGIN);	// 長すぎて途中までしか読まなかったとき
 		}
 		Seek(step.dataEndOffset, NULL, FILE_BEGIN); // may contain padding byte(s)
 		stack.pop(); // ascend to parent (FRM8) chunk
@@ -160,6 +184,7 @@ bool CDFFFile::readPROP(ChunkStep& step, DFFChunkHeader& hdr)
 		frm8.prop.fs.offsetToData = step.dataOffset;
 		Read(&frm8.prop.fs.data, sizeof frm8.prop.fs.data, NULL);
 		frm8.prop.fs.setupData();
+		Seek(step.dataEndOffset, NULL, FILE_BEGIN);
 		stack.pop();	// ascend to parent (PROP) chunk
 		break;
 	case DFFID_CHNL:
@@ -167,13 +192,15 @@ bool CDFFFile::readPROP(ChunkStep& step, DFFChunkHeader& hdr)
 		frm8.prop.chnl.offsetToData = step.dataOffset;
 		Read(&frm8.prop.chnl.data, sizeof frm8.prop.chnl.data, NULL);
 		frm8.prop.chnl.setupData();
-		for (int i = 0; i < frm8.prop.chnl.data.numChannels; i++)
+		frm8.prop.chnl.chID.clear();
+		for (int i = 0; i < std::min(frm8.prop.chnl.data.numChannels, MaxChannelIDs) && Tell() < step.dataEndOffset; i++)
 		{
-			DFFID id;
+			DFFID id = 0;
 			Read(&id, sizeof id, NULL);
 			id = ntohl(id);
 			frm8.prop.chnl.chID.push_back(id);
 		}
+		Seek(step.dataEndOffset, NULL, FILE_BEGIN);
 		stack.pop();	// ascend to parent (PROP) chunk
 		break;
 	case DFFID_CMPR:
@@ -192,6 +219,7 @@ bool CDFFFile::readPROP(ChunkStep& step, DFFChunkHeader& hdr)
 		frm8.prop.abss.offsetToData = step.dataOffset;
 		Read(&frm8.prop.abss.data, sizeof frm8.prop.abss.data, NULL);
 		frm8.prop.abss.setupData();
+		Seek(step.dataEndOffset, NULL, FILE_BEGIN);
 		stack.pop();	// ascend to parent (PROP) chunk
 		break;
 	case DFFID_LSCO:
@@ -199,6 +227,7 @@ bool CDFFFile::readPROP(ChunkStep& step, DFFChunkHeader& hdr)
 		frm8.prop.lsco.offsetToData = step.dataOffset;
 		Read(&frm8.prop.lsco.data, sizeof frm8.prop.lsco.data, NULL);
 		frm8.prop.lsco.setupData();
+		Seek(step.dataEndOffset, NULL, FILE_BEGIN);
 		stack.pop();	// ascend to parent (PROP) chunk
 		break;
 	default:
@@ -258,6 +287,8 @@ void CDFFFile::assignBuffer(uint32_t bytesToRead, uint64_t limit, std::string& t
 		bytesToRead = 0;
 	else if (bytesToRead > limit - pos)
 		bytesToRead = static_cast<uint32_t>(limit - pos);
+	// 長すぎる文字列は先頭だけ使う (呼び出し元がチャンクの終わりへシークする)
+	bytesToRead = std::min(bytesToRead, MaxTextBytes);
 
 	std::string buf(bytesToRead, char());
 	DWORD bytesRead = 0;

@@ -7,6 +7,7 @@
 #endif
 #include <windows.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <stack>

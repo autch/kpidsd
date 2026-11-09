@@ -123,6 +123,9 @@ bool DsdSource::Open(IKpiFile* file)
 	const Format detected = Detect(file);
 	if (detected == Format::None)
 		return false;
+	// 大きさの分からないファイル (KPI_FILE_EOF) は、長さを決められないので開かない
+	if (file->GetSize() == KPI_FILE_EOF)
+		return false;
 
 	kpiFile = file;
 	adapter = std::make_unique<KpiFileAdapter>(file);
