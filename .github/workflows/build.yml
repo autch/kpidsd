@@ -40,7 +40,7 @@ jobs:
       # 合成した DSF / DSDIFF / WSD で、DoP のフレーム、タグ、シーク、D2P のフィルタを確かめる
       - name: Test
         working-directory: build
-        run: ctest -C Release --output-on-failure
+        run: ctest -C Release -j 4 --output-on-failure
 
       - uses: actions/upload-artifact@v7
         with:

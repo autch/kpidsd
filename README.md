@@ -92,10 +92,10 @@ MinGW (gcc / clang) でのクロスビルドも CMakeLists.txt には書いて�
 
 ```
 cd build-x64
-ctest -C Release
+ctest -C Release -j 16
 ```
 
-Python 3 が要る。`check-d2p` は numpy も要る (なければ飛ばす)。
+Python 3 が要る。fixtures.py は kpi-render を CPU のスレッド数だけ同時に走らせる (`-j N` で変えられる)。`check-d2p` は numpy も要る (なければ飛ばす)。
 
 - `make-fixtures` — DSF (LSB first / MSB first、ブロックの途中で終わるもの、ID3v2 あり、5.1ch、DSD128)、
   DSDIFF (UTF-8 / Shift_JIS のタグ、ID3 チャンク、奇数バイト、48kHz 系)、WSD (Shift_JIS のタグ) を合成する。

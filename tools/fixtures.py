@@ -20,6 +20,7 @@ seek-check-data は DATADIR の下の .dsf / .dff / .wsd をすべて seek-check
 """
 
 import argparse
+import concurrent.futures
 import json
 import math
 import os
@@ -255,12 +256,25 @@ def dop_reference(planar, word):
     return bytes(out)
 
 
+def parallel(args, func, items):
+    """items をそれぞれ func で調べる。kpi-render を別プロセスで同時に args.jobs 個まで走らせる。
+    func は (表示する行のリスト, 失敗の数) を返す。結果は items の順に表示する"""
+    fails = 0
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs) as pool:
+        for lines, n in pool.map(func, items):
+            for line in lines:
+                print(line, flush=True)
+            fails += n
+    return 1 if fails else 0
+
+
 def check_dop(args):
     expect, invalid = load(args.dir)
     cli = Cli(args)
-    fails = 0
-    for name, e in expect.items():
-        before = fails
+
+    def check(item):
+        name, e = item
+        lines, fails = [], 0
         path = os.path.join(args.dir, name)
         planar = read_planar(args.dir, name, e)
         frames = (e["bytes"] + 1) // 2
@@ -271,29 +285,34 @@ def check_dop(args):
                     "loop": "0", "seekable": "7", "unit": "0"}
             for key, value in want.items():
                 if info.get(key) != value:
-                    print(f"{name} -b {bits}: {key}={info.get(key)}, expected {value}")
+                    lines.append(f"{name} -b {bits}: {key}={info.get(key)}, expected {value}")
                     fails += 1
             pcm = cli.run("kpidop.kpi", "-b", bits, path).stdout
             ref = dop_reference(planar, word)
             if pcm != ref:
                 diff = next((i for i in range(min(len(pcm), len(ref))) if pcm[i] != ref[i]), min(len(pcm), len(ref)))
-                print(f"{name} -b {bits}: DoP differs at byte {diff} (got {len(pcm)} bytes, expected {len(ref)})")
+                lines.append(f"{name} -b {bits}: DoP differs at byte {diff} (got {len(pcm)} bytes, expected {len(ref)})")
                 fails += 1
-        print(f"{name}: {'NG' if fails > before else 'ok'}")
-    for name in invalid:
-        for plugin in ("kpidop.kpi", "kpid2p.kpi"):
-            if cli.run(plugin, "--info", os.path.join(args.dir, name), check=False).returncode == 0:
-                print(f"{name}: {plugin} opened a file it should refuse")
-                fails += 1
-    return 1 if fails else 0
+        lines.append(f"{name}: {'NG' if fails else 'ok'}")
+        return lines, fails
+
+    def refuse(item):
+        name, plugin = item
+        if cli.run(plugin, "--info", os.path.join(args.dir, name), check=False).returncode == 0:
+            return [f"{name}: {plugin} opened a file it should refuse"], 1
+        return [], 0
+
+    ret = parallel(args, check, list(expect.items()))
+    return parallel(args, refuse, [(n, p) for n in invalid for p in ("kpidop.kpi", "kpid2p.kpi")]) | ret
 
 
 def check_tags(args):
     expect, _ = load(args.dir)
     cli = Cli(args)
-    fails = 0
-    for name, e in expect.items():
-        before = fails
+
+    def check(item):
+        name, e = item
+        lines, fails = [], 0
         path = os.path.join(args.dir, name)
         for plugin in ("kpidop.kpi", "kpid2p.kpi"):
             for mode in ([], ["--tag-only"]):
@@ -301,36 +320,44 @@ def check_tags(args):
                 tags = {k[4:]: v for k, v in info.items() if k.startswith("tag.")}
                 label = f"{name} {plugin} {' '.join(mode)}"
                 if tags != e["tags"]:
-                    print(f"{label}: tags {tags}, expected {e['tags']}")
+                    lines.append(f"{label}: tags {tags}, expected {e['tags']}")
                     fails += 1
                 calls = sorted({k.split(".")[1] for k in info if k.startswith("gettaginfo.")})
                 g = e["gettaginfo"]
-                if calls != ["0"] or info.get("gettaginfo.0.type") != str(g["type"]) \
-                        or info.get("gettaginfo.0.data") != g.get("data"):
-                    print(f"{label}: GetTagInfo was called as {[(k, v[:40]) for k, v in info.items() if k.startswith('gettaginfo.')]}")
+                if calls != ["0"] or info.get("gettaginfo.0.type") != str(g["type"])                         or info.get("gettaginfo.0.data") != g.get("data"):
+                    lines.append(f"{label}: GetTagInfo was called as {[(k, v[:40]) for k, v in info.items() if k.startswith('gettaginfo.')]}")
                     fails += 1
-        print(f"{name}: {'NG' if fails > before else 'ok'}")
-    return 1 if fails else 0
+        lines.append(f"{name}: {'NG' if fails else 'ok'}")
+        return lines, fails
+
+    return parallel(args, check, list(expect.items()))
 
 
-def seek_check_files(cli, files):
-    fails = 0
-    runs = [("kpidop.kpi", ["-b", "24"]), ("kpidop.kpi", ["-b", "-64"]),
-            ("kpid2p.kpi", []), ("kpid2p.kpi", ["-r", "44100", "-b", "-32"]), ("kpid2p.kpi", ["-r", "352800"])]
-    for plugin, opts in runs:
-        # コマンドラインが長くなりすぎないよう分けて渡す
-        for i in range(0, len(files), 20):
-            result = cli.run(plugin, *opts, "--seek-check", *files[i:i + 20], check=False)
-            sys.stderr.write(result.stderr.decode("utf-8", errors="replace").replace("\r\n", "\n"))
-            if result.returncode != 0:
-                print(f"seek-check {plugin} {' '.join(opts)}: NG")
-                fails += 1
-    return 1 if fails else 0
+SEEK_RUNS = [("kpidop.kpi", ["-b", "24"]), ("kpidop.kpi", ["-b", "-64"]),
+             ("kpid2p.kpi", []), ("kpid2p.kpi", ["-r", "44100", "-b", "-32"]), ("kpid2p.kpi", ["-r", "352800"])]
+
+
+def seek_check_files(args, files):
+    cli = Cli(args)
+
+    # ファイルとプラグインの設定の組ごとに kpi-render を 1 つ走らせる
+    def check(item):
+        path, (plugin, opts) = item
+        result = cli.run(plugin, *opts, "--seek-check", path, check=False)
+        lines = result.stderr.decode("utf-8", errors="replace").splitlines()
+        label = f"[{plugin} {' '.join(opts)}]"
+        lines = [f"{label} {line}" for line in lines if line]
+        if result.returncode != 0:
+            lines.append(f"{label} {path}: NG")
+            return lines, 1
+        return lines, 0
+
+    return parallel(args, check, [(f, run) for f in files for run in SEEK_RUNS])
 
 
 def seek_check(args):
     expect, _ = load(args.dir)
-    return seek_check_files(Cli(args), [os.path.join(args.dir, name) for name in expect])
+    return seek_check_files(args, [os.path.join(args.dir, name) for name in expect])
 
 
 def seek_check_data(args):
@@ -340,7 +367,7 @@ def seek_check_data(args):
     if not files:
         print(f"no DSD files under {args.dir}")
         return 1
-    return seek_check_files(Cli(args), files)
+    return seek_check_files(args, files)
 
 
 # --- D2P ---
@@ -384,19 +411,22 @@ def check_d2p(args):
     # 出力の周波数とビット数の選び方
     planar = [bytes([SILENCE]) * 4096] * 2
     for multiple in (64, 128, 256, 512):
+        write_dsf_planar(os.path.join(work, f"silence_{multiple}.dsf"), planar, 44100 * multiple)
+
+    def check_rate(item):
+        multiple, request = item
         rate = 44100 * multiple
-        path = os.path.join(work, f"silence_{multiple}.dsf")
-        write_dsf_planar(path, planar, rate)
-        for request in (0, 22050, 44100, 48000, 96000, 176400, 192000, 352800, 1000000):
-            d = d2p_rule(rate, request)
-            info = cli.info("kpid2p.kpi", path, "-r", str(request))
-            step = d // 8
-            want = {"format": "0", "rate": str(rate // d), "bits": "-64", "seekable": "7", "unit": "0",
-                    "fadeout": "-1", "length": str(((4096 + step - 1) // step) * 10000000 // (rate // d))}
-            for key, value in want.items():
-                if info.get(key) != value:
-                    print(f"DSD{multiple} -r {request}: {key}={info.get(key)}, expected {value}")
-                    fails += 1
+        d = d2p_rule(rate, request)
+        info = cli.info("kpid2p.kpi", os.path.join(work, f"silence_{multiple}.dsf"), "-r", str(request))
+        step = d // 8
+        want = {"format": "0", "rate": str(rate // d), "bits": "-64", "seekable": "7", "unit": "0",
+                "fadeout": "-1", "length": str(((4096 + step - 1) // step) * 10000000 // (rate // d))}
+        lines = [f"DSD{multiple} -r {request}: {key}={info.get(key)}, expected {value}"
+                 for key, value in want.items() if info.get(key) != value]
+        return lines, len(lines)
+
+    fails += parallel(args, check_rate, [(m, r) for m in (64, 128, 256, 512)
+                                          for r in (0, 22050, 44100, 48000, 96000, 176400, 192000, 352800, 1000000)])
     for bits, want in (("-32", "-32"), ("16", "-64"), ("0", "-64")):
         got = cli.info("kpid2p.kpi", os.path.join(work, "silence_64.dsf"), "-b", bits).get("bits")
         if got != want:
@@ -412,8 +442,9 @@ def check_d2p(args):
 
     # インパルス応答: 無音パターンのファイルと、ビットを 1 つずつ反転させたファイルの差から FIR を取り出す
     spacing = 32768  # 反転させるビットの間隔 (タップ数より長く)
-    for multiple, request in ((64, 44100), (64, 88200), (64, 176400), (64, 352800), (128, 44100), (128, 88200),
-                              (256, 88200), (256, 352800)):
+
+    def check_impulse(item):
+        multiple, request = item
         rate = 44100 * multiple
         d = d2p_rule(rate, request)
         fout = rate // d
@@ -456,10 +487,12 @@ def check_d2p(args):
         rejection = -stopband.max()
         nyquist = db[np.argmin(np.abs(freqs - fout / 2))]
         ok = abs(dc) < 1e-3 and ripple < 1e-3 and rejection > 110
-        print(f"DSD{multiple} -> {fout}Hz: {taps} taps, DC {dc:+.5f}dB, passband 0-{fp / 1000:.2f}kHz ripple {ripple:.6f}dB, "
-              f"{fout / 2000:.2f}kHz {nyquist:+.2f}dB, stopband {fstop / 1000:.2f}kHz- {rejection:.1f}dB: {'ok' if ok else 'NG'}")
-        if not ok:
-            fails += 1
+        line = (f"DSD{multiple} -> {fout}Hz: {taps} taps, DC {dc:+.5f}dB, passband 0-{fp / 1000:.2f}kHz ripple {ripple:.6f}dB, "
+                f"{fout / 2000:.2f}kHz {nyquist:+.2f}dB, stopband {fstop / 1000:.2f}kHz- {rejection:.1f}dB: {'ok' if ok else 'NG'}")
+        return [line], 0 if ok else 1
+
+    fails += parallel(args, check_impulse, [(64, 44100), (64, 88200), (64, 176400), (64, 352800), (128, 44100),
+                                            (128, 88200), (256, 88200), (256, 352800)])
 
     # ΔΣ 変調 (2 次) した 997Hz、-6dBFS のサイン波。SINAD は変調器の量子化雑音で決まる
     rate = DSD64
@@ -513,6 +546,8 @@ def main():
     parser.add_argument("dir")
     parser.add_argument("--cli")
     parser.add_argument("--emulator")
+    parser.add_argument("-j", "--jobs", type=int, default=os.cpu_count() or 1,
+                        help="kpi-render を同時に走らせる数 (既定は CPU のスレッド数)")
     args = parser.parse_args()
     if args.command == "generate":
         generate(args.dir)
