@@ -1,17 +1,18 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<?xml version="1.0" encoding="utf-8"?>
+<!-- CMakeLists.txt の kpid2p (と kpidsd_common) と同じ設定でビルドする。設定を変えるときは両方を直すこと -->
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
@@ -20,252 +21,99 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{F7F0D2AD-766C-40E5-BB3D-B4648918B69A}</ProjectGuid>
-    <Keyword>Win32Proj</Keyword>
     <RootNamespace>kpid2p</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+  <PropertyGroup Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140_xp</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140_xp</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140_xp</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140_xp</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings">
-  </ImportGroup>
-  <ImportGroup Label="Shared">
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+  <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="KMPPlugin.props" />
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="KMPPlugin.props" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="KMPPlugin.props" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="KMPPlugin.props" />
-  </ImportGroup>
-  <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Users\Autch\src\soxr-0.1.2-Source\src;$(KMPPluginsPath)\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
-    <SourcePath>$(KMPPluginsPath)\SDK;$(SourcePath)</SourcePath>
+  <PropertyGroup>
+    <!-- kpi-render が同じディレクトリの .kpi を使うので、出力先をそろえる -->
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>kpid2p</TargetName>
     <TargetExt>.kpi</TargetExt>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Users\Autch\src\soxr-0.1.2-Source\src;$(KMPPluginsPath)\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
-    <SourcePath>$(KMPPluginsPath)\SDK;$(SourcePath)</SourcePath>
-    <TargetExt>.kpi</TargetExt>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Users\Autch\src\soxr-0.1.2-Source\src;$(KMPPluginsPath)\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
-    <SourcePath>$(KMPPluginsPath)\SDK;$(SourcePath)</SourcePath>
-    <TargetExt>.kpi</TargetExt>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Users\Autch\src\soxr-0.1.2-Source\src;$(KMPPluginsPath)\SDK;$(ProjectDir)include;$(SolutionDir)libdsd\include;$(IncludePath)</IncludePath>
-    <SourcePath>$(KMPPluginsPath)\SDK;$(SourcePath)</SourcePath>
-    <TargetExt>.kpi</TargetExt>
-  </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+  <ItemDefinitionGroup>
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <WarningLevel>Level4</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;KPID2P_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\common;$(ProjectDir)..\kpisdk;$(ProjectDir)..\libdsd\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <!-- UNICODE / _UNICODE は CharacterSet で定義される -->
+      <PreprocessorDefinitions>NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>kpid2p.def</ModuleDefinitionFile>
-      <AdditionalDependencies>$(TargetDir)libdsd.lib;$(TargetDir)libsoxr.lib</AdditionalDependencies>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
     </Link>
-    <CustomBuildStep>
-      <Command>
-      </Command>
-    </CustomBuildStep>
-    <PostBuildEvent>
-      <Command>copy /y "$(TargetPath)" "$(KMPPluginsPath)\x86\Plugins"
-copy /y "$(TargetDir)kpid2p.pdb" "$(KMPPluginsPath)\x86\Plugins"
-copy /y "$(ProjectDir)kpid2p.txt" "$(KMPPluginsPath)\x86\Plugins"
-</Command>
-    </PostBuildEvent>
-    <ResourceCompile>
-      <Culture>0x007f</Culture>
-    </ResourceCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <!-- KbMedia Player 本体付属のプラグインと同じく、VC++ ランタイム (Visual Studio 2026) は動的リンクする -->
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;_USRDLL;KPID2P_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
     </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <ModuleDefinitionFile>kpid2p.def</ModuleDefinitionFile>
-      <AdditionalDependencies>$(TargetDir)libdsd.lib;$(TargetDir)libsoxr.lib</AdditionalDependencies>
-    </Link>
-    <CustomBuildStep>
-      <Command>
-      </Command>
-    </CustomBuildStep>
-    <PostBuildEvent>
-      <Command>copy /y "$(TargetPath)" "$(KMPPluginsPath)\x64\Plugins"
-copy /y "$(TargetDir)kpid2p.pdb" "$(KMPPluginsPath)\x64\Plugins"
-copy /y "$(ProjectDir)kpid2p.txt" "$(KMPPluginsPath)\x64\Plugins"
-</Command>
-    </PostBuildEvent>
-    <ResourceCompile>
-      <Culture>0x007f</Culture>
-    </ResourceCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
-      <WarningLevel>Level4</WarningLevel>
-      <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;KPID2P_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <ModuleDefinitionFile>kpid2p.def</ModuleDefinitionFile>
-      <AdditionalDependencies>$(TargetDir)libdsd.lib;$(TargetDir)libsoxr.lib</AdditionalDependencies>
-    </Link>
-    <CustomBuildStep>
-      <Command>
-      </Command>
-    </CustomBuildStep>
-    <PostBuildEvent>
-      <Command>copy /y "$(TargetPath)" "$(KMPPluginsPath)\x86\Plugins"
-copy /y "$(ProjectDir)kpid2p.txt" "$(KMPPluginsPath)\x86\Plugins"
-</Command>
-    </PostBuildEvent>
-    <ResourceCompile>
-      <Culture>0x007f</Culture>
-    </ResourceCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ClCompile>
-      <WarningLevel>Level4</WarningLevel>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;_USRDLL;KPID2P_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-    </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <ModuleDefinitionFile>kpid2p.def</ModuleDefinitionFile>
-      <AdditionalDependencies>$(TargetDir)libdsd.lib;$(TargetDir)libsoxr.lib</AdditionalDependencies>
     </Link>
-    <CustomBuildStep>
-      <Command>
-      </Command>
-    </CustomBuildStep>
-    <PostBuildEvent>
-      <Command>copy /y "$(TargetPath)" "$(KMPPluginsPath)\x64\Plugins"
-copy /y "$(ProjectDir)kpid2p.txt" "$(KMPPluginsPath)\x64\Plugins"
-</Command>
-    </PostBuildEvent>
-    <ResourceCompile>
-      <Culture>0x007f</Culture>
-    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Text Include="kpid2p.txt" />
-    <Text Include="ReadMe.txt" />
+    <ClCompile Include="DsdDecimator.cpp" />
+    <ClCompile Include="KpiD2pDecoder.cpp" />
+    <ClCompile Include="KpiD2pDecoderModule.cpp" />
+    <ClCompile Include="kpid2p.cpp" />
+    <ClCompile Include="..\common\DsdSource.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="c:\usr\local\kbmed280_beta30\SDK\kmp_pi.h" />
-    <ClInclude Include="c:\usr\local\kbmed280_beta30\SDK\kpi.h" />
-    <ClInclude Include="c:\usr\local\kbmed280_beta30\SDK\kpi_decoder.h" />
-    <ClInclude Include="c:\usr\local\kbmed280_beta30\SDK\kpi_impl.h" />
-    <ClInclude Include="include\CAbstractKpi.h" />
-    <ClInclude Include="include\CDFFDecoderKpi.h" />
-    <ClInclude Include="include\CDSFDecoderKpi.h" />
-    <ClInclude Include="include\CKpiFileAdapter.h" />
-    <ClInclude Include="include\CKpiPartialFile.h" />
-    <ClInclude Include="include\CWSDDecoderKpi.h" />
-    <ClInclude Include="include\Downsampler.h" />
-    <ClInclude Include="include\DSD2PCM.h" />
-    <ClInclude Include="include\KpiD2pDecoderModule.h" />
-    <ClInclude Include="include\Noiseshaper.h" />
-    <ClInclude Include="include\stdafx.h" />
-    <ClInclude Include="include\targetver.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\soxr-0.1.2-Source\msvc\libsoxr.vcxproj">
-      <Project>{af9ad75c-4785-4432-bac3-adab1e7f1192}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\libdsd\libdsd.vcxproj">
-      <Project>{df7139be-dea3-4031-8f77-8b7be0e3801a}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="KMPPlugin.props">
-      <SubType>Designer</SubType>
-    </None>
     <None Include="kpid2p.def" />
+    <None Include="kpid2p.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\CAbstractKpi.cpp" />
-    <ClCompile Include="src\CDFFDecoderKpi.cpp" />
-    <ClCompile Include="src\CDSFDecoderKpi.cpp" />
-    <ClCompile Include="src\CWSDDecoderKpi.cpp" />
-    <ClCompile Include="src\dllexports.cpp" />
-    <ClCompile Include="src\dllmain.cpp" />
-    <ClCompile Include="src\Downsampler.cpp" />
-    <ClCompile Include="src\DSD2PCM.cpp" />
-    <ClCompile Include="src\KpiD2pDecoderModule.cpp" />
-    <ClCompile Include="src\stdafx.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
+    <ClInclude Include="DsdDecimator.h" />
+    <ClInclude Include="KpiD2pDecoder.h" />
+    <ClInclude Include="KpiD2pDecoderModule.h" />
+    <ClInclude Include="..\common\DsdSource.h" />
+    <ClInclude Include="..\common\KpiFileAdapter.h" />
+    <ClInclude Include="..\common\KpiPartialFile.h" />
+    <ClInclude Include="..\common\kpi_mingw_uuid.h" />
+    <ClInclude Include="..\common\stdafx.h" />
+    <ClInclude Include="..\kpisdk\kmp_pi.h" />
+    <ClInclude Include="..\kpisdk\kpi.h" />
+    <ClInclude Include="..\kpisdk\kpi_decoder.h" />
+    <ClInclude Include="..\kpisdk\kpi_impl.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\libdsd\libdsd.vcxproj">
+      <Project>{DF7139BE-DEA3-4031-8F77-8B7BE0E3801A}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

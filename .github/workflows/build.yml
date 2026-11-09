@@ -1,0 +1,107 @@
+# x64 / x86 の kpidop.kpi と kpid2p.kpi を MSVC でビルドし、プラグインごとに配布用の zip にまとめる。
+# - push / pull request: zip を Actions のアーティファクトにする
+# - v* のタグの push: さらに zip を添付したドラフトのリリースを作る (説明を書いてから公開する)
+name: build
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # KbMedia Player 本体付属のプラグインとそろえて Visual Studio 2026 でビルドする
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            platform: x64
+          - arch: x86
+            platform: Win32
+    steps:
+      - uses: actions/checkout@v7
+
+      # check-d2p (FIR の周波数特性の測定) に使う
+      - name: Install numpy
+        run: python -m pip install numpy
+
+      - name: Configure
+        run: cmake -S . -B build -G "Visual Studio 18 2026" -A ${{ matrix.platform }}
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      # 合成した DSF / DSDIFF / WSD で、DoP のフレーム、タグ、シーク、D2P のフィルタを確かめる
+      - name: Test
+        working-directory: build
+        run: ctest -C Release --output-on-failure
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: kpi-${{ matrix.arch }}
+          path: |
+            build/bin/Release/kpidop.kpi
+            build/bin/Release/kpid2p.kpi
+          if-no-files-found: error
+          retention-days: 1
+
+  package:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # ドラフトのリリースを作るため
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: kpi-*
+          path: kpi
+
+      - name: Make zip
+        id: zip
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            suffix="${GITHUB_REF_NAME}"
+          else
+            suffix="${GITHUB_SHA::7}"
+          fi
+          for name in kpidop kpid2p; do
+            dist="dist/$name"
+            mkdir -p "$dist/x64" "$dist/x86"
+            cp "kpi/kpi-x64/$name.kpi" "$dist/x64/"
+            cp "kpi/kpi-x86/$name.kpi" "$dist/x86/"
+            cp "$name/$name.txt" "$dist/"   # UTF-8 (BOM 付き) / CRLF のまま入れる
+            cp "$name/COPYING" "$dist/"
+            (cd "$dist" && zip -9 -r "../../${name}_${suffix}.zip" "$name.txt" COPYING x64 x86)
+            unzip -l "${name}_${suffix}.zip"
+          done
+          echo "dop=kpidop_${suffix}.zip" >> "$GITHUB_OUTPUT"
+          echo "d2p=kpid2p_${suffix}.zip" >> "$GITHUB_OUTPUT"
+
+      # zip をそのまま上げる (archive: false なら zip の中に zip ができない)
+      - uses: actions/upload-artifact@v7
+        with:
+          path: ${{ steps.zip.outputs.dop }}
+          archive: false
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          path: ${{ steps.zip.outputs.d2p }}
+          archive: false
+          if-no-files-found: error
+
+      - if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v3
+        with:
+          draft: true
+          files: |
+            ${{ steps.zip.outputs.dop }}
+            ${{ steps.zip.outputs.d2p }}
