@@ -2,6 +2,9 @@
 
 /* Based on "Direct Stream Digital Interchange File Format, DSDIFF, version 1.5" from Philips */
 
+#include <stack>
+#include <string>
+
 #include "dff_types.h"
 #include "CLargeFile.h"
 
@@ -20,7 +23,7 @@ private:
 	std::stack<ChunkStep> stack;
 
 	bool readChunkHeader(DFFChunkHeader& header, ChunkStep& step);
-	void assignBuffer(uint32_t bytesToRead, std::string& target);
+	void assignBuffer(uint32_t bytesToRead, uint64_t limit, std::string& target);
 
 	bool readFRM8(ChunkStep& step, DFFChunkHeader& hdr);
 	bool readPROP(ChunkStep& step, DFFChunkHeader& hdr);

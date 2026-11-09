@@ -91,7 +91,7 @@ BOOL CDSFFile::checkHeader()
 
 void CDSFFile::Reset()
 {
-	if (hFile == INVALID_HANDLE_VALUE)
+	if (hFile == NULL)
 		return;
 
 	Seek(dataOffset, NULL, FILE_BEGIN);

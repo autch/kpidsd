@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "CWSDFile.h"
 
 CWSDFile::CWSDFile() : CLargeFile()
@@ -32,7 +32,7 @@ BOOL CWSDFile::Open(CAbstractFile* file)
 
 void CWSDFile::Reset()
 {
-	if (hFile == INVALID_HANDLE_VALUE)
+	if (hFile == NULL)
 		return;
 
 	Seek(header.dataOffset, NULL, FILE_BEGIN);
@@ -68,8 +68,8 @@ BOOL CWSDFile::checkHeader()
 	data_spec.samplingFrequency = ntohl(data_spec.samplingFrequency);
 	data_spec.channelAssignment = ntohl(data_spec.channelAssignment);
 	data_spec.emphasis = ntohl(data_spec.emphasis);
-	data_spec.timeReferenceHi = ntohll(data_spec.timeReferenceLo);	// typo�ł͂Ȃ�
-	data_spec.timeReferenceLo = ntohll(data_spec.timeReferenceHi);	// typo�ł͂Ȃ�
+	data_spec.timeReferenceHi = ntohll(data_spec.timeReferenceLo);	// typoではない
+	data_spec.timeReferenceLo = ntohll(data_spec.timeReferenceHi);	// typoではない
 
 	if (header.textOffset != 0)
 	{

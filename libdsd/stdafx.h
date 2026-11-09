@@ -1,18 +1,14 @@
-// stdafx.h : •W€‚ÌƒVƒXƒeƒ€ ƒCƒ“ƒNƒ‹[ƒh ƒtƒ@ƒCƒ‹‚ÌƒCƒ“ƒNƒ‹[ƒh ƒtƒ@ƒCƒ‹A‚Ü‚½‚Í
-// QÆ‰ñ”‚ª‘½‚­A‚©‚Â‚ ‚Ü‚è•ÏX‚³‚ê‚È‚¢AƒvƒƒWƒFƒNƒgê—p‚ÌƒCƒ“ƒNƒ‹[ƒh ƒtƒ@ƒCƒ‹
-// ‚ğ‹Lq‚µ‚Ü‚·B
-//
+ï»¿// libdsd ã®å„ã‚½ãƒ¼ã‚¹ãŒæœ€åˆã«ã‚¤ãƒ³ã‚¯ãƒ«ãƒ¼ãƒ‰ã™ã‚‹ãƒ˜ãƒƒãƒ€
 
 #pragma once
 
-#include "targetver.h"
-
-#define WIN32_LEAN_AND_MEAN             // Windows ƒwƒbƒ_[‚©‚çg—p‚³‚ê‚Ä‚¢‚È‚¢•”•ª‚ğœŠO‚µ‚Ü‚·B
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 
-#include <stdint.h>
-#include <vector>
+#include <cstdint>
+#include <cstring>
 #include <stack>
 #include <string>
-
-// TODO: ƒvƒƒOƒ‰ƒ€‚É•K—v‚È’Ç‰Áƒwƒbƒ_[‚ğ‚±‚±‚ÅQÆ‚µ‚Ä‚­‚¾‚³‚¢B
+#include <vector>

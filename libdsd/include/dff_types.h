@@ -1,10 +1,11 @@
 #ifndef dff_types_h
 #define dff_types_h
 
-#pragma pack(push, 1)
-
 #include <stdint.h>
+#include <string>
 #include <vector>
+
+#pragma pack(push, 1)
 
 #define DSD_FREQ_64FS	( 2822400)		// = 44100 * 64
 #define DSD_FREQ_128FS	( 5644800)		// = 44100 * 128
@@ -88,6 +89,9 @@ typedef uint32_t DFFID;
 #define DFFID_DIAR					(MAKE_DFFID('D', 'I', 'A', 'R'))
 #define DFFID_DITI					(MAKE_DFFID('D', 'I', 'T', 'I'))
 #define DFFID_MANF					(MAKE_DFFID('M', 'A', 'N', 'F'))
+
+// 非公式の ID3v2 タグのチャンク (FRM8 の直下)
+#define DFFID_ID3_					(MAKE_DFFID('I', 'D', '3', ' '))
 
 namespace
 {
@@ -483,6 +487,11 @@ struct MANFChunk : public DFFChunk
 	}
 };
 
+struct ID3Chunk : public DFFChunk
+{
+	// ID3v2 tag data
+};
+
 struct FRM8Chunk : public DFFChunk
 {
 	struct
@@ -498,6 +507,7 @@ struct FRM8Chunk : public DFFChunk
 	COMTChunk	comt;
 	DIINChunk	diin;
 	MANFChunk	manf;
+	ID3Chunk	id3;
 
 	void setupData()
 	{
