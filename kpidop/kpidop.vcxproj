@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- CMakeLists.txt の kpidop (と kpidsd_common) と同じ設定でビルドする。設定を変えるときは両方を直すこと -->
+<!-- CMakeLists.txt の kpidop と同じ設定でビルドする。設定を変えるときは両方を直すこと -->
 <Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -50,7 +50,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\common;$(ProjectDir)..\kpisdk;$(ProjectDir)..\libdsd\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\dsdcore;$(ProjectDir)..\kpisdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <!-- UNICODE / _UNICODE は CharacterSet で定義される -->
       <PreprocessorDefinitions>NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -86,9 +86,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="KpiDopDecoder.cpp" />
-    <ClCompile Include="KpiDopDecoderModule.cpp" />
     <ClCompile Include="kpidop.cpp" />
-    <ClCompile Include="..\common\DsdSource.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="kpidop.def" />
@@ -96,19 +94,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="KpiDopDecoder.h" />
-    <ClInclude Include="KpiDopDecoderModule.h" />
-    <ClInclude Include="..\common\DsdSource.h" />
-    <ClInclude Include="..\common\KpiFileAdapter.h" />
-    <ClInclude Include="..\common\KpiPartialFile.h" />
-    <ClInclude Include="..\common\kpi_mingw_uuid.h" />
-    <ClInclude Include="..\common\stdafx.h" />
-    <ClInclude Include="..\kpisdk\kmp_pi.h" />
-    <ClInclude Include="..\kpisdk\kpi.h" />
-    <ClInclude Include="..\kpisdk\kpi_decoder.h" />
-    <ClInclude Include="..\kpisdk\kpi_impl.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\libdsd\libdsd.vcxproj">
+    <ProjectReference Include="..\dsdcore\dsdcore.vcxproj">
       <Project>{DF7139BE-DEA3-4031-8F77-8B7BE0E3801A}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>

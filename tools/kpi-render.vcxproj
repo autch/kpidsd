@@ -49,7 +49,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\common;$(ProjectDir)..\kpisdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\dsdcore;$(ProjectDir)..\kpisdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <!-- UNICODE / _UNICODE は CharacterSet で定義される -->
       <PreprocessorDefinitions>NOMINMAX;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>

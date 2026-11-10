@@ -1,7 +1,7 @@
 ﻿// fuzz-decoder - 壊れたファイルや細工されたファイルで kpidop / kpid2p のデコーダーを試す (libFuzzer)
 //
 // プラグインの DLL ではなく、デコーダーのソースを直接リンクする (AddressSanitizer をかけるため)。
-// 1 つの入力について、本体と同じ呼び方で次を行う。
+// 1 つの入力について、パーサーだけを MemoryReader で試し、本体と同じ呼び方で次を行う。
 //   - タグ取得用の Open (cpRequest = NULL) と Select (ppMediaInfo = NULL)
 //   - kpidop と kpid2p のデコード用の Open、Select、Seek、Render (いくつかの位置と長さで)
 // 本体のタグ解析に渡されたファイル (KpiPartialFile) は、本体と同じく最後まで読む。
@@ -15,8 +15,10 @@
 #include <cstddef>
 #include <vector>
 
+#include "DsdLayout.h"
 #include "KpiDopDecoder.h"
 #include "KpiD2pDecoder.h"
+#include "Reader.h"
 
 namespace
 {
@@ -151,6 +153,13 @@ namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
+	{
+		// パーサーが返した範囲は、ValidateDsdLayout を通っていればファイルに収まる
+		MemoryReader reader(data, size);
+		DsdLayout layout;
+		if (ParseDsd(reader, layout) && !ValidateDsdLayout(layout, size))
+			__debugbreak();
+	}
 	decode<KpiDopDecoder>(data, size, 0, -64, true);
 	decode<KpiDopDecoder>(data, size, 0, -64, false);
 	decode<KpiDopDecoder>(data, size, 0, 24, false);

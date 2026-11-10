@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- CMakeLists.txt の libdsd と同じ設定でビルドする。設定を変えるときは両方を直すこと -->
+<!-- CMakeLists.txt の dsdcore と同じ設定でビルドする。設定を変えるときは両方を直すこと -->
 <Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -21,7 +21,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{DF7139BE-DEA3-4031-8F77-8B7BE0E3801A}</ProjectGuid>
-    <RootNamespace>libdsd</RootNamespace>
+    <RootNamespace>dsdcore</RootNamespace>
     <Keyword>Win32Proj</Keyword>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
@@ -45,11 +45,11 @@
     <!-- プラグインのプロジェクトがリンクする -->
     <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
-    <TargetName>libdsd</TargetName>
+    <TargetName>dsdcore</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\kpisdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <!-- UNICODE / _UNICODE は CharacterSet で定義される -->
       <PreprocessorDefinitions>NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -75,22 +75,25 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\CDFFFile.cpp" />
-    <ClCompile Include="src\CDSFFile.cpp" />
-    <ClCompile Include="src\CLargeFile.cpp" />
-    <ClCompile Include="src\CWSDFile.cpp" />
+    <ClCompile Include="DsdDecoder.cpp" />
+    <ClCompile Include="DsdLayout.cpp" />
+    <ClCompile Include="DsdSource.cpp" />
+    <ClCompile Include="ParseDFF.cpp" />
+    <ClCompile Include="ParseDSF.cpp" />
+    <ClCompile Include="ParseWSD.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DsdDecoder.h" />
+    <ClInclude Include="DsdLayout.h" />
+    <ClInclude Include="DsdSource.h" />
+    <ClInclude Include="KpiPartialFile.h" />
+    <ClInclude Include="Reader.h" />
+    <ClInclude Include="kpi_mingw_uuid.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="include\CAbstractFile.h" />
-    <ClInclude Include="include\CDFFFile.h" />
-    <ClInclude Include="include\CDSFFile.h" />
-    <ClInclude Include="include\CLargeFile.h" />
-    <ClInclude Include="include\CWSDFile.h" />
-    <ClInclude Include="include\align.h" />
-    <ClInclude Include="include\dff_types.h" />
-    <ClInclude Include="include\dsf_types.h" />
-    <ClInclude Include="include\wsd_types.h" />
+    <ClInclude Include="..\kpisdk\kmp_pi.h" />
+    <ClInclude Include="..\kpisdk\kpi.h" />
+    <ClInclude Include="..\kpisdk\kpi_decoder.h" />
+    <ClInclude Include="..\kpisdk\kpi_impl.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

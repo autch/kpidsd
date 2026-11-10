@@ -10,39 +10,20 @@ namespace
 	constexpr size_t ChunkSamples = 4096;
 }
 
-KpiD2pDecoder::KpiD2pDecoder()
+bool KpiD2pDecoder::setup(const KPI_MEDIAINFO* cpRequest)
 {
-	kpi_InitMediaInfo(&info);
-}
-
-KpiD2pDecoder::~KpiD2pDecoder() = default;
-
-bool KpiD2pDecoder::Open(const KPI_MEDIAINFO* cpRequest, IKpiFile* pFile)
-{
-	if (!source.Open(pFile))
-		return false;
-
 	const uint32_t decimation = DsdDecimator::ChooseDecimation(source.SampleRate(), cpRequest != nullptr ? cpRequest->dwSampleRate : 0);
 	if (decimation == 0)
 		return false;
 
-	kpi_InitMediaInfo(&info);
-	info.dwNumber = 1;
-	info.dwCount = 1;
 	info.dwFormatType = KPI_MEDIAINFO::FORMAT_PCM;
 	info.dwSampleRate = source.SampleRate() / decimation;
-	info.dwChannels = source.Channels();
 	// 浮動小数点で出す。-32 を要求されたときだけ 32bit、それ以外は 64bit
 	info.nBitsPerSample = (cpRequest != nullptr && cpRequest->nBitsPerSample == -32) ? -32 : -64;
 
 	// 出力のサンプル k は、DSD の k * D サンプル目を中心にした窓から計算する
 	const uint64_t step = decimation / 8;
 	totalSamples = (source.BytesPerChannel() + step - 1) / step;
-	info.qwLength = kpi_SampleTo100ns(totalSamples, info.dwSampleRate);
-	info.qwLoop = 0;
-	info.qwFadeOut = static_cast<UINT64>(-1);	// 本体の設定に従う
-	info.dwSeekableFlags = KPI_MEDIAINFO::SEEK_FLAGS_SAMPLE | KPI_MEDIAINFO::SEEK_FLAGS_ACCURATE | KPI_MEDIAINFO::SEEK_FLAGS_ROUGH;
-	info.dwUnitSample = 0;
 
 	// タグ取得用に開いたときはフィルタを作らない
 	if (cpRequest != nullptr)
@@ -56,49 +37,11 @@ bool KpiD2pDecoder::Open(const KPI_MEDIAINFO* cpRequest, IKpiFile* pFile)
 	return true;
 }
 
-DWORD KpiD2pDecoder::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, IKpiTagInfo* pTagInfo, DWORD dwTagGetFlags)
+void KpiD2pDecoder::seek(uint64_t position)
 {
-	try
-	{
-		if (dwNumber != 1)
-		{
-			if (ppMediaInfo != nullptr)
-				*ppMediaInfo = nullptr;
-			return 0;
-		}
-		if (ppMediaInfo != nullptr)
-			*ppMediaInfo = &info;
-		if (pTagInfo != nullptr)
-			source.SetTags(pTagInfo, dwTagGetFlags);
-		return 1;
-	}
-	catch (...)
-	{
-		if (ppMediaInfo != nullptr)
-			*ppMediaInfo = nullptr;
-		return 0;
-	}
-}
-
-UINT64 KpiD2pDecoder::Seek(UINT64 qwPosSample, DWORD dwFlag)
-{
-	// 出力は入力の決まった範囲だけから計算するので、サンプル単位で正確にシークできる
-	sample = std::min<uint64_t>(qwPosSample, totalSamples);
+	sample = position;
 	for (auto& buffer : input)
 		buffer.clear();
-	return sample;
-}
-
-DWORD KpiD2pDecoder::Render(BYTE* pBuffer, DWORD dwSizeSample)
-{
-	try
-	{
-		return render(pBuffer, dwSizeSample);
-	}
-	catch (...)
-	{
-		return 0;
-	}
 }
 
 bool KpiD2pDecoder::fill(int64_t begin, int64_t end)
@@ -176,7 +119,7 @@ DWORD KpiD2pDecoder::render(BYTE* pBuffer, DWORD dwSizeSample)
 		const int64_t end = begin + static_cast<int64_t>(samples - 1) * step + window;
 		if (!fill(begin, end))
 		{
-			totalSamples = sample;
+			truncate(sample);
 			break;
 		}
 

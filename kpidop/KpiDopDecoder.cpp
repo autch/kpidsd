@@ -13,87 +13,29 @@ namespace
 	constexpr size_t ChunkFrames = 8192;
 }
 
-KpiDopDecoder::KpiDopDecoder() : marker(DopMarker1)
+bool KpiDopDecoder::setup(const KPI_MEDIAINFO* cpRequest)
 {
-	kpi_InitMediaInfo(&info);
-}
-
-KpiDopDecoder::~KpiDopDecoder() = default;
-
-bool KpiDopDecoder::Open(const KPI_MEDIAINFO* cpRequest, IKpiFile* pFile)
-{
-	if (!source.Open(pFile))
-		return false;
-
-	kpi_InitMediaInfo(&info);
-	info.dwNumber = 1;
-	info.dwCount = 1;
 	// 最終出力段までデータを加工させない
 	info.dwFormatType = KPI_MEDIAINFO::FORMAT_DOP;
 	// DSD64 (2.8224MHz) なら 176.4kHz。DSD128 以上は PCM の周波数を上げる方式 (0x06/0xF9 は使わない)
 	info.dwSampleRate = source.SampleRate() / 16;
-	info.dwChannels = source.Channels();
-
 	// 24bit を要求されたときだけ 24bit。それ以外 (普通は -64) は 32bit INT で出す
 	const int requested = cpRequest != nullptr ? cpRequest->nBitsPerSample : 0;
 	info.nBitsPerSample = (requested == 0 || requested == 24) ? 24 : 32;
 	bytesPerWord = static_cast<unsigned>(info.nBitsPerSample / 8);
 
-	totalFrames = (source.BytesPerChannel() + 1) / 2;
-	info.qwLength = kpi_SampleTo100ns(totalFrames, info.dwSampleRate);
-	info.qwLoop = 0;
-	info.qwFadeOut = static_cast<UINT64>(-1);
-	info.dwSeekableFlags = KPI_MEDIAINFO::SEEK_FLAGS_SAMPLE | KPI_MEDIAINFO::SEEK_FLAGS_ACCURATE | KPI_MEDIAINFO::SEEK_FLAGS_ROUGH;
-	info.dwUnitSample = 0;
-
+	// 1 フレームはチャンネルあたり 2 バイト。最後の半端な 1 バイトは無音で埋める
+	totalSamples = (source.BytesPerChannel() + 1) / 2;
 	// マーカーは開いたときだけ初期化する
 	marker = DopMarker1;
 	frame = 0;
 	return true;
 }
 
-DWORD KpiDopDecoder::Select(DWORD dwNumber, const KPI_MEDIAINFO** ppMediaInfo, IKpiTagInfo* pTagInfo, DWORD dwTagGetFlags)
+void KpiDopDecoder::seek(uint64_t position)
 {
-	try
-	{
-		if (dwNumber != 1)
-		{
-			if (ppMediaInfo != nullptr)
-				*ppMediaInfo = nullptr;
-			return 0;
-		}
-		if (ppMediaInfo != nullptr)
-			*ppMediaInfo = &info;
-		if (pTagInfo != nullptr)
-			source.SetTags(pTagInfo, dwTagGetFlags);
-		return 1;
-	}
-	catch (...)
-	{
-		if (ppMediaInfo != nullptr)
-			*ppMediaInfo = nullptr;
-		return 0;
-	}
-}
-
-UINT64 KpiDopDecoder::Seek(UINT64 qwPosSample, DWORD dwFlag)
-{
-	// 1 フレームはチャンネルあたり 2 バイトなので、フレーム単位で正確にシークできる
-	frame = std::min<uint64_t>(qwPosSample, totalFrames);
+	frame = position;
 	source.Seek(frame * 2);
-	return frame;
-}
-
-DWORD KpiDopDecoder::Render(BYTE* pBuffer, DWORD dwSizeSample)
-{
-	try
-	{
-		return render(pBuffer, dwSizeSample);
-	}
-	catch (...)
-	{
-		return 0;
-	}
 }
 
 DWORD KpiDopDecoder::render(BYTE* pBuffer, DWORD dwSizeSample)
@@ -103,13 +45,12 @@ DWORD KpiDopDecoder::render(BYTE* pBuffer, DWORD dwSizeSample)
 	BYTE* out = pBuffer;
 	DWORD done = 0;
 
-	while (done < dwSizeSample && frame < totalFrames)
+	while (done < dwSizeSample && frame < totalSamples)
 	{
-		const size_t frames = static_cast<size_t>(std::min<uint64_t>({ dwSizeSample - done, totalFrames - frame, ChunkFrames }));
+		const size_t frames = static_cast<size_t>(std::min<uint64_t>({ dwSizeSample - done, totalSamples - frame, ChunkFrames }));
 		const size_t bytes = frames * 2;
 		dsd.resize(bytes * channels);
 
-		// 曲の終わりの半端な 1 バイトだけは無音で埋める
 		const size_t expected = static_cast<size_t>(std::min<uint64_t>(bytes, bytesPerChannel - frame * 2));
 		const size_t got = source.Read(dsd.data(), bytes, bytes);
 		size_t usable = frames;
@@ -140,7 +81,7 @@ DWORD KpiDopDecoder::render(BYTE* pBuffer, DWORD dwSizeSample)
 		done += static_cast<DWORD>(usable);
 		if (usable < frames)
 		{
-			totalFrames = frame;
+			truncate(frame);
 			break;
 		}
 	}

@@ -28,42 +28,29 @@ function(kpidsd_warnings target)
   endif()
 endfunction()
 
-# DSF / DSDIFF / WSD のパーサー
-add_library(libdsd STATIC
-  libdsd/src/CDFFFile.cpp
-  libdsd/src/CDSFFile.cpp
-  libdsd/src/CLargeFile.cpp
-  libdsd/src/CWSDFile.cpp
-  libdsd/include/CAbstractFile.h
-  libdsd/include/CDFFFile.h
-  libdsd/include/CDSFFile.h
-  libdsd/include/CLargeFile.h
-  libdsd/include/CWSDFile.h
-  libdsd/include/dff_types.h
-  libdsd/include/dsf_types.h
-  libdsd/include/wsd_types.h
-  libdsd/stdafx.h
+# 両方のプラグインで使う部分: DSF / DSDIFF / WSD のパーサー、DSD の読み出しとタグ、デコーダーの共通部分
+add_library(dsdcore STATIC
+  dsdcore/DsdDecoder.cpp
+  dsdcore/DsdDecoder.h
+  dsdcore/DsdLayout.cpp
+  dsdcore/DsdLayout.h
+  dsdcore/DsdSource.cpp
+  dsdcore/DsdSource.h
+  dsdcore/KpiPartialFile.h
+  dsdcore/ParseDFF.cpp
+  dsdcore/ParseDSF.cpp
+  dsdcore/ParseWSD.cpp
+  dsdcore/Reader.h
+  dsdcore/kpi_mingw_uuid.h
+  dsdcore/stdafx.h
 )
-target_include_directories(libdsd PRIVATE libdsd PUBLIC libdsd/include)
-kpidsd_warnings(libdsd)
-
-# 両方のプラグインで使う、IKpiFile から DSD を読む部分とタグ
-add_library(kpidsd_common STATIC
-  common/DsdSource.cpp
-  common/DsdSource.h
-  common/KpiFileAdapter.h
-  common/KpiPartialFile.h
-  common/kpi_mingw_uuid.h
-  common/stdafx.h
-)
-target_include_directories(kpidsd_common PUBLIC common kpisdk)
-target_link_libraries(kpidsd_common PUBLIC libdsd)
-kpidsd_warnings(kpidsd_common)
+target_include_directories(dsdcore PUBLIC dsdcore kpisdk)
+kpidsd_warnings(dsdcore)
 
 function(kpidsd_plugin name)
   add_library(${name} SHARED ${ARGN})
   target_include_directories(${name} PRIVATE ${name})
-  target_link_libraries(${name} PRIVATE kpidsd_common)
+  target_link_libraries(${name} PRIVATE dsdcore)
   kpidsd_warnings(${name})
   if(NOT MSVC)
     target_link_options(${name} PRIVATE -static $<$<STREQUAL:${CMAKE_SIZEOF_VOID_P},4>:-Wl,--kill-at>)
@@ -80,8 +67,6 @@ kpidsd_plugin(kpidop
   kpidop/kpidop.def
   kpidop/KpiDopDecoder.cpp
   kpidop/KpiDopDecoder.h
-  kpidop/KpiDopDecoderModule.cpp
-  kpidop/KpiDopDecoderModule.h
 )
 
 kpidsd_plugin(kpid2p
@@ -91,8 +76,6 @@ kpidsd_plugin(kpid2p
   kpid2p/DsdDecimator.h
   kpid2p/KpiD2pDecoder.cpp
   kpid2p/KpiD2pDecoder.h
-  kpid2p/KpiD2pDecoderModule.cpp
-  kpid2p/KpiD2pDecoderModule.h
 )
 
 if(KPIDSD_FUZZ)
@@ -103,7 +86,7 @@ if(KPIDSD_FUZZ)
     kpid2p/DsdDecimator.cpp
   )
   target_include_directories(fuzz-decoder PRIVATE kpidop kpid2p)
-  target_link_libraries(fuzz-decoder PRIVATE kpidsd_common)
+  target_link_libraries(fuzz-decoder PRIVATE dsdcore)
   kpidsd_warnings(fuzz-decoder)
   target_compile_options(fuzz-decoder PRIVATE /fsanitize=fuzzer)
   set_target_properties(fuzz-decoder PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -116,7 +99,7 @@ set(KPIDSD_TEST_DATA "" CACHE PATH "Directory of DSF/DSDIFF/WSD files for seek-c
 
 if(KPIDSD_BUILD_TOOLS)
   add_executable(kpi-render tools/kpi-render.cpp)
-  target_include_directories(kpi-render PRIVATE common kpisdk)
+  target_include_directories(kpi-render PRIVATE dsdcore kpisdk)
   kpidsd_warnings(kpi-render)
   target_compile_definitions(kpi-render PRIVATE _CRT_SECURE_NO_WARNINGS)
   if(NOT MSVC)
