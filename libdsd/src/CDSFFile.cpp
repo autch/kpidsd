@@ -45,8 +45,7 @@ BOOL CDSFFile::checkHeader()
 			return FALSE;
 		if (header.size != DSF_HEADER_SIZE)
 			return FALSE;
-		if (header.file_size != FileSize())
-			return FALSE;
+		// header.file_size は実際の大きさと違ってもよい (途中で切れたファイルは読める分だけにする)
 	}
 	{
 		if (!Read(&fmt_header, sizeof fmt_header, &dwBytesRead))

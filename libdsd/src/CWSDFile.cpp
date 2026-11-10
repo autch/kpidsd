@@ -53,10 +53,13 @@ BOOL CWSDFile::checkHeader()
 	header.textOffset = ntohl(header.textOffset);
 	header.dataOffset = ntohl(header.dataOffset);
 
-	if (header.textOffset > FileSize()
-		|| header.textOffset < sizeof header + sizeof data_spec)
+	// textOffset が 0 ならテキストはない。あるなら、ヘッダの後ろ、データの前に収まっていなければならない。
+	// データはヘッダ (とテキスト) の後ろからファイルの終わりまで
+	const uint64_t headerEnd = sizeof header + sizeof data_spec;
+	if (header.dataOffset < headerEnd || header.dataOffset >= FileSize())
 		return FALSE;
-	if (header.dataOffset >= FileSize())
+	if (header.textOffset != 0
+		&& (header.textOffset < headerEnd || static_cast<uint64_t>(header.textOffset) + sizeof text > header.dataOffset))
 		return FALSE;
 
 	if (Read(&data_spec, sizeof data_spec, &dwBytesRead) == FALSE)

@@ -8,11 +8,12 @@ namespace
 	constexpr uint32_t MaxTextBytes = 65536;		// 1 つの文字列の長さ
 	constexpr size_t MaxComments = 16;				// 覚えておくコメントの数 (使うのは最初の 1 つ)
 	constexpr uint16_t MaxChannelIDs = 256;
+
+	constexpr uint64_t ChunkHeaderSize = 12;		// ckID (4) + ckDataSize (8)
 }
 
 CDFFFile::CDFFFile() : CLargeFile(), frm8()
 {
-
 }
 
 CDFFFile::~CDFFFile()
@@ -24,270 +25,268 @@ void CDFFFile::Close()
 	CLargeFile::Close();
 }
 
-bool CDFFFile::readChunkHeader(DFFChunkHeader& header, ChunkStep& step)
+bool CDFFFile::readChunkHeader(uint64_t pos, uint64_t parentEnd, ChunkStep& step)
 {
-	DWORD dwBytesRead = 0;
-	step.headerOffset = Tell();
+	if (pos > parentEnd || parentEnd - pos < ChunkHeaderSize)
+		return false;
+	if (!Seek(static_cast<int64_t>(pos), NULL, FILE_BEGIN))
+		return false;
 
-	if (!Read(&header, sizeof header, &dwBytesRead) || dwBytesRead != sizeof header)
+	DFFChunkHeader header;
+	DWORD bytesRead = 0;
+	if (!Read(&header, sizeof header, &bytesRead) || bytesRead != sizeof header)
 		return false;
 	header.ckID = ntohl(header.ckID);
 	header.ckDataSize = ntohll(header.ckDataSize);
 
+	step.headerOffset = pos;
 	step.header = header;
-	step.dataOffset = Tell();
-	// 大きすぎる長さ (壊れたファイル、途中で切れたファイル) はファイルの終わりまでとみなす
-	const uint64_t size = FileSize();
-	if (step.dataOffset > size || header.ckDataSize > size - step.dataOffset)
-		step.dataEndOffset = size;
+	step.dataOffset = pos + ChunkHeaderSize;
+	// 親の終わりを超える長さ (壊れたファイル、途中で切れたファイル) は親の終わりまでとみなす。
+	// 奇数長のチャンクの後ろには 1 バイトの詰め物がある
+	const uint64_t room = parentEnd - step.dataOffset;
+	if (header.ckDataSize >= room)
+		step.dataEndOffset = parentEnd;
 	else
-		step.dataEndOffset = step.dataOffset + header.ckDataSize + (header.ckDataSize & 1);
-
+		step.dataEndOffset = std::min(step.dataOffset + header.ckDataSize + (header.ckDataSize & 1), parentEnd);
 	return true;
+}
+
+bool CDFFFile::readField(const ChunkStep& step, uint64_t offset, void* dst, size_t size)
+{
+	const uint64_t length = step.dataEndOffset - step.dataOffset;
+	if (offset > length || size > length - offset)
+		return false;
+	if (!Seek(static_cast<int64_t>(step.dataOffset + offset), NULL, FILE_BEGIN))
+		return false;
+	DWORD bytesRead = 0;
+	return Read(dst, static_cast<DWORD>(size), &bytesRead) && bytesRead == size;
 }
 
 BOOL CDFFFile::Open(CAbstractFile* file)
 {
-	ChunkStep step;
-	DFFChunkHeader hdr;
-
 	hFile = file;
+	frm8 = FRM8Chunk();
+	chunks = 0;
 
-	size_t chunks = 0;
-	while (chunks++ < MaxChunks && readChunkHeader(hdr, step))
-	{
-		// 終わった親チャンク (PROP、DIIN など) から抜ける
-		while (!stack.empty() && stack.top().dataEndOffset <= step.headerOffset)
-			stack.pop();
+	const uint64_t size = FileSize();
+	ChunkStep top;
+	if (!readChunkHeader(0, size, top) || top.header.ckID != DFFID_FRM8)
+		return FALSE;
+	frm8.header = top.header;
+	frm8.offsetToData = top.dataOffset;
+	if (!readField(top, 0, &frm8.data, sizeof frm8.data))
+		return FALSE;
+	frm8.setupData();
 
-		bool handled = false;
-
-		stack.push(step);
-
-		handled = handled || readFRM8(step, hdr);
-		handled = handled || readPROP(step, hdr);
-		handled = handled || readDIIN(step, hdr);
-		if (!handled)
-		{
-			// default action -- skip that chunk
-			Seek(step.dataEndOffset, NULL, FILE_BEGIN);
-			stack.pop();
-		}
-
-	}
-
-	// 正しいファイルなら FRM8 だけが残る
-	while (!stack.empty())
-		stack.pop();
-
-	return frm8.ID() == DFFID_FRM8 ? TRUE : FALSE;
+	parseChildren(DFFID_FRM8, top.dataOffset + sizeof frm8.data, top.dataEndOffset);
+	return TRUE;
 }
 
-bool CDFFFile::readFRM8(ChunkStep& step, DFFChunkHeader& hdr)
+void CDFFFile::parseChildren(DFFID parent, uint64_t begin, uint64_t end)
 {
-	switch (hdr.ckID)
+	uint64_t pos = begin;
+	ChunkStep step;
+	while (chunks < MaxChunks && readChunkHeader(pos, end, step))
 	{
-	case DFFID_FRM8:
-	{
-		frm8.header = hdr;
-		frm8.offsetToData = step.dataOffset;
-
-		Read(&frm8.data, sizeof frm8.data, NULL);
-		frm8.setupData();
-		// descend to subchunks
-		break;
+		chunks++;
+		switch (parent)
+		{
+		case DFFID_FRM8: readFRM8Child(step); break;
+		case DFFID_PROP: readPROPChild(step); break;
+		case DFFID_DIIN: readDIINChild(step); break;
+		default: break;
+		}
+		// 子チャンクの中でどこまで読んだかに関係なく、宣言された長さの終わりへ進む
+		pos = step.dataEndOffset;
 	}
-	case DFFID_FVER:
+}
+
+void CDFFFile::readFRM8Child(const ChunkStep& step)
+{
+	switch (step.header.ckID)
 	{
-		Read(&frm8.fver.data, sizeof frm8.fver.data, NULL);
-		frm8.fver.setupData();
-		Seek(step.dataEndOffset, NULL, FILE_BEGIN);
-		stack.pop(); // ascend to parent (FRM8) chunk
+	case DFFID_FVER:
+		if (frm8.fver.offsetToData == 0 && readField(step, 0, &frm8.fver.data, sizeof frm8.fver.data))
+		{
+			frm8.fver.header = step.header;
+			frm8.fver.offsetToData = step.dataOffset;
+			frm8.fver.setupData();
+		}
+		break;
+	case DFFID_PROP:
+	{
+		// 音のプロパティ ('SND ') の PROP だけを、最初の 1 つだけ使う
+		decltype(frm8.prop.data) data;
+		if (frm8.prop.offsetToData != 0 || !readField(step, 0, &data, sizeof data))
+			break;
+		frm8.prop.data = data;
+		frm8.prop.setupData();
+		if (frm8.prop.data.propType != DFFID_SND_)
+			break;
+		frm8.prop.header = step.header;
+		frm8.prop.offsetToData = step.dataOffset;
+		parseChildren(DFFID_PROP, step.dataOffset + sizeof data, step.dataEndOffset);
 		break;
 	}
 	case DFFID_DSD_:
-	{
-		frm8.dsd.header = hdr;
-		frm8.dsd.offsetToData = step.dataOffset;
-		Seek(step.dataEndOffset, NULL, FILE_BEGIN);
-		stack.pop(); // ascend to parent (FRM8) chunk
-		break;
-	}
-	case DFFID_COMT:
-	{
-		frm8.comt.header = hdr;
-		frm8.comt.offsetToData = step.dataOffset;
-		Read(&frm8.comt.data, sizeof frm8.comt.data, NULL);
-		frm8.comt.setupData();
-		for (uint32_t i = 0; i < frm8.comt.data.numComments && Tell() < step.dataEndOffset; i++)
+		if (frm8.dsd.offsetToData == 0)
 		{
-			Comment comment;
-
-			DWORD bytesRead = 0;
-			if (!Read(&comment.data, sizeof comment.data, &bytesRead) || bytesRead != sizeof comment.data)
-				break;
-			comment.setupData();
-			if (frm8.comt.comments.size() >= MaxComments)
-			{
-				// 残りは読み飛ばす
-				const uint64_t pos = Tell();
-				if (comment.data.count >= step.dataEndOffset - std::min(pos, step.dataEndOffset))
-					break;
-				Seek(pos + comment.data.count, NULL, FILE_BEGIN);
-				continue;
-			}
-			const uint64_t textEnd = std::min(Tell() + comment.data.count, step.dataEndOffset);
-			assignBuffer(comment.data.count, step.dataEndOffset, comment.commentText);
-			frm8.comt.comments.push_back(comment);
-			Seek(textEnd, NULL, FILE_BEGIN);	// 長すぎて途中までしか読まなかったとき
+			frm8.dsd.header = step.header;
+			frm8.dsd.offsetToData = step.dataOffset;
 		}
-		Seek(step.dataEndOffset, NULL, FILE_BEGIN); // may contain padding byte(s)
-		stack.pop(); // ascend to parent (FRM8) chunk
 		break;
-	}
-	case DFFID_ID3_:
-	{
-		// 非公式の ID3v2 タグ。FRM8 の直下にあるものだけを使う
-		if (stack.size() == 2 && frm8.id3.offsetToData == 0)
+	case DFFID_COMT:
+		if (frm8.comt.offsetToData == 0)
+			readCOMT(step);
+		break;
+	case DFFID_DIIN:
+		if (frm8.diin.offsetToData == 0)
 		{
-			frm8.id3.header = hdr;
+			frm8.diin.header = step.header;
+			frm8.diin.offsetToData = step.dataOffset;
+			parseChildren(DFFID_DIIN, step.dataOffset, step.dataEndOffset);
+		}
+		break;
+	case DFFID_ID3_:
+		// 非公式の ID3v2 タグ
+		if (frm8.id3.offsetToData == 0)
+		{
+			frm8.id3.header = step.header;
 			frm8.id3.offsetToData = step.dataOffset;
 		}
-		Seek(step.dataEndOffset, NULL, FILE_BEGIN);
-		stack.pop(); // ascend to parent (FRM8) chunk
+		break;
+	default:
+		// DST、DSTI、MANF などは使わない
 		break;
 	}
-	case DFFID_DST_:
-	case DFFID_DSTI:
-	case DFFID_MANF:
-	default:
-		return false;
-	}
-	return true;
 }
 
-bool CDFFFile::readPROP(ChunkStep& step, DFFChunkHeader& hdr)
+void CDFFFile::readPROPChild(const ChunkStep& step)
 {
-	switch (hdr.ckID)
+	PROPChunk& prop = frm8.prop;
+	switch (step.header.ckID)
 	{
-	case DFFID_PROP:
-	{
-		frm8.prop.header = hdr;
-		frm8.prop.offsetToData = step.dataOffset;
-		Read(&frm8.prop.data, sizeof frm8.prop.data, NULL);
-		frm8.prop.setupData();
-		// descend to subchunks
-		break;
-	}
 	case DFFID_FS__:
-		frm8.prop.fs.header = hdr;
-		frm8.prop.fs.offsetToData = step.dataOffset;
-		Read(&frm8.prop.fs.data, sizeof frm8.prop.fs.data, NULL);
-		frm8.prop.fs.setupData();
-		Seek(step.dataEndOffset, NULL, FILE_BEGIN);
-		stack.pop();	// ascend to parent (PROP) chunk
+		if (prop.fs.offsetToData == 0 && readField(step, 0, &prop.fs.data, sizeof prop.fs.data))
+		{
+			prop.fs.header = step.header;
+			prop.fs.offsetToData = step.dataOffset;
+			prop.fs.setupData();
+		}
 		break;
 	case DFFID_CHNL:
-		frm8.prop.chnl.header = hdr;
-		frm8.prop.chnl.offsetToData = step.dataOffset;
-		Read(&frm8.prop.chnl.data, sizeof frm8.prop.chnl.data, NULL);
-		frm8.prop.chnl.setupData();
-		frm8.prop.chnl.chID.clear();
-		for (int i = 0; i < std::min(frm8.prop.chnl.data.numChannels, MaxChannelIDs) && Tell() < step.dataEndOffset; i++)
+		if (prop.chnl.offsetToData == 0 && readField(step, 0, &prop.chnl.data, sizeof prop.chnl.data))
 		{
-			DFFID id = 0;
-			Read(&id, sizeof id, NULL);
-			id = ntohl(id);
-			frm8.prop.chnl.chID.push_back(id);
+			prop.chnl.header = step.header;
+			prop.chnl.offsetToData = step.dataOffset;
+			prop.chnl.setupData();
+			const uint16_t ids = std::min(prop.chnl.data.numChannels, MaxChannelIDs);
+			for (uint16_t i = 0; i < ids; i++)
+			{
+				DFFID id = 0;
+				if (!readField(step, sizeof prop.chnl.data + i * sizeof id, &id, sizeof id))
+					break;
+				prop.chnl.chID.push_back(ntohl(id));
+			}
 		}
-		Seek(step.dataEndOffset, NULL, FILE_BEGIN);
-		stack.pop();	// ascend to parent (PROP) chunk
 		break;
 	case DFFID_CMPR:
-		frm8.prop.cmpr.header = hdr;
-		frm8.prop.cmpr.offsetToData = step.dataOffset;
-		Read(&frm8.prop.cmpr.data, sizeof frm8.prop.cmpr.data, NULL);
-		frm8.prop.cmpr.setupData();
-		
-		assignBuffer(frm8.prop.cmpr.data.count, step.dataEndOffset, frm8.prop.cmpr.compressionName);
-		Seek(step.dataEndOffset, NULL, FILE_BEGIN);
-
-		stack.pop();	// ascend to parent (PROP) chunk
+		if (prop.cmpr.offsetToData == 0 && readField(step, 0, &prop.cmpr.data, sizeof prop.cmpr.data))
+		{
+			prop.cmpr.header = step.header;
+			prop.cmpr.offsetToData = step.dataOffset;
+			prop.cmpr.setupData();
+			assignBuffer(prop.cmpr.data.count, step.dataEndOffset, prop.cmpr.compressionName);
+		}
 		break;
 	case DFFID_ABSS:
-		frm8.prop.abss.header = hdr;
-		frm8.prop.abss.offsetToData = step.dataOffset;
-		Read(&frm8.prop.abss.data, sizeof frm8.prop.abss.data, NULL);
-		frm8.prop.abss.setupData();
-		Seek(step.dataEndOffset, NULL, FILE_BEGIN);
-		stack.pop();	// ascend to parent (PROP) chunk
+		if (prop.abss.offsetToData == 0 && readField(step, 0, &prop.abss.data, sizeof prop.abss.data))
+		{
+			prop.abss.header = step.header;
+			prop.abss.offsetToData = step.dataOffset;
+			prop.abss.setupData();
+		}
 		break;
 	case DFFID_LSCO:
-		frm8.prop.lsco.header = hdr;
-		frm8.prop.lsco.offsetToData = step.dataOffset;
-		Read(&frm8.prop.lsco.data, sizeof frm8.prop.lsco.data, NULL);
-		frm8.prop.lsco.setupData();
-		Seek(step.dataEndOffset, NULL, FILE_BEGIN);
-		stack.pop();	// ascend to parent (PROP) chunk
+		if (prop.lsco.offsetToData == 0 && readField(step, 0, &prop.lsco.data, sizeof prop.lsco.data))
+		{
+			prop.lsco.header = step.header;
+			prop.lsco.offsetToData = step.dataOffset;
+			prop.lsco.setupData();
+		}
 		break;
 	default:
-		return false;
+		break;
 	}
-	return true;
 }
 
-bool CDFFFile::readDIIN(ChunkStep& step, DFFChunkHeader& hdr)
+void CDFFFile::readDIINChild(const ChunkStep& step)
 {
-	switch (hdr.ckID)
+	DIINChunk& diin = frm8.diin;
+	switch (step.header.ckID)
 	{
-	case DFFID_DIIN:
-	{
-		frm8.diin.header = hdr;
-		frm8.diin.offsetToData = step.dataOffset;
-		// descend to subchunks
-		break;
-	}
 	case DFFID_DIAR:
-	{
-		frm8.diin.diar.header = hdr;
-		frm8.diin.diar.offsetToData = step.dataOffset;
-		Read(&frm8.diin.diar.data, sizeof frm8.diin.diar.data, NULL);
-		frm8.diin.diar.setupData();
-
-		assignBuffer(frm8.diin.diar.data.count, step.dataEndOffset, frm8.diin.diar.artistText);
-		Seek(step.dataEndOffset, NULL, FILE_BEGIN); // may contain padding byte
-
-		stack.pop(); // ascend to parent (DIIN) chunk
+		if (diin.diar.offsetToData == 0)
+			readText(step, diin.diar, diin.diar.data.count, diin.diar.artistText);
 		break;
-	}
 	case DFFID_DITI:
-	{
-		frm8.diin.diti.header = hdr;
-		frm8.diin.diti.offsetToData = step.dataOffset;
-		Read(&frm8.diin.diti.data, sizeof frm8.diin.diti.data, NULL);
-		frm8.diin.diti.setupData();
-
-		assignBuffer(frm8.diin.diti.data.count, step.dataEndOffset, frm8.diin.diti.titleText);
-		Seek(step.dataEndOffset, NULL, FILE_BEGIN); // may contain padding byte
-
-		stack.pop(); // ascend to parent (DIIN) chunk
+		if (diin.diti.offsetToData == 0)
+			readText(step, diin.diti, diin.diti.data.count, diin.diti.titleText);
+		break;
+	default:
+		// EMID、MARK などは使わない
 		break;
 	}
-	default:
-		return false;
-	}
-	return true;
 }
 
+// DIAR / DITI: count (4 バイト) と文字列
+void CDFFFile::readText(const ChunkStep& step, DFFChunk& chunk, uint32_t& count, std::string& text)
+{
+	uint32_t be = 0;
+	if (!readField(step, 0, &be, sizeof be))
+		return;
+	chunk.header = step.header;
+	chunk.offsetToData = step.dataOffset;
+	count = ntohl(be);
+	assignBuffer(count, step.dataEndOffset, text);
+}
+
+void CDFFFile::readCOMT(const ChunkStep& step)
+{
+	COMTChunk& comt = frm8.comt;
+	if (!readField(step, 0, &comt.data, sizeof comt.data))
+		return;
+	comt.header = step.header;
+	comt.offsetToData = step.dataOffset;
+	comt.setupData();
+
+	uint64_t offset = sizeof comt.data;
+	for (uint32_t i = 0; i < comt.data.numComments && comt.comments.size() < MaxComments; i++)
+	{
+		Comment comment;
+		if (!readField(step, offset, &comment.data, sizeof comment.data))
+			break;
+		comment.setupData();
+		offset += sizeof comment.data;
+		assignBuffer(comment.data.count, step.dataEndOffset, comment.commentText);
+		comt.comments.push_back(comment);
+		// コメントの後ろには、長さを偶数にするための詰め物がある
+		offset += static_cast<uint64_t>(comment.data.count) + (comment.data.count & 1);
+		if (offset >= step.dataEndOffset - step.dataOffset)
+			break;
+	}
+}
+
+// 今の位置から bytesToRead バイトの文字列を読む。limit (チャンクの終わり) を超えては読まない
 void CDFFFile::assignBuffer(uint32_t bytesToRead, uint64_t limit, std::string& target)
 {
-	// 壊れたファイルで大きすぎる長さを読まないよう、チャンクの終わりまでに制限する
 	const uint64_t pos = Tell();
 	if (pos >= limit)
 		bytesToRead = 0;
 	else if (bytesToRead > limit - pos)
 		bytesToRead = static_cast<uint32_t>(limit - pos);
-	// 長すぎる文字列は先頭だけ使う (呼び出し元がチャンクの終わりへシークする)
+	// 長すぎる文字列は先頭だけ使う
 	bytesToRead = std::min(bytesToRead, MaxTextBytes);
 
 	std::string buf(bytesToRead, char());

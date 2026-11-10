@@ -161,7 +161,7 @@ void DsdSource::Close()
 
 	format = Format::None;
 	sampleRate = channels = blockSize = 0;
-	bytesPerChannel = dataOffset = position = 0;
+	bytesPerChannel = dataOffset = dataEnd = position = 0;
 	lsbFirst = false;
 	filePosition = rawBlock = UINT64_MAX;
 	raw.clear();
@@ -190,6 +190,7 @@ bool DsdSource::openDSF()
 	const uint64_t dataBytes = std::min(chunkSize >= DSF_data_SIZE ? chunkSize - DSF_data_SIZE : 0, fileSize - dataOffset);
 	const uint64_t blocks = dataBytes / (static_cast<uint64_t>(blockSize) * channels);
 	bytesPerChannel = std::min((fmt->sample_count + 7) / 8, blocks * blockSize);
+	dataEnd = dataOffset + blocks * blockSize * channels;
 	return true;
 }
 
@@ -347,9 +348,11 @@ void DsdSource::SetTags(IKpiTagInfo* pTagInfo, DWORD dwTagGetFlags)
 	{
 	case Format::DSF:
 	{
-		// ID3v2 はファイルの終わりまで
+		// ID3v2 はファイルの終わりまで。ヘッダや音のデータと重なる位置や、"ID3" で始まらないものは使わない
 		const uint64_t pointer = dsf->Header()->id3v2_pointer;
-		if (pointer != 0 && pointer < fileSize)
+		uint8_t magic[3] = {};
+		if (pointer != 0 && pointer >= dataEnd && pointer < fileSize && readAt(pointer, magic, sizeof magic)
+			&& std::memcmp(magic, "ID3", 3) == 0)
 			delegateID3v2(pTagInfo, pointer, fileSize, dwTagGetFlags);
 		else
 			pTagInfo->GetTagInfo(nullptr, nullptr, KPI_TAGTYPE_NONE, dwTagGetFlags);

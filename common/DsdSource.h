@@ -70,6 +70,7 @@ private:
 	uint64_t bytesPerChannel = 0;
 
 	uint64_t dataOffset = 0;	// DSD データの先頭のファイル位置
+	uint64_t dataEnd = 0;		// 使う DSD データの終わりのファイル位置 (DSF のブロックの終わり)
 	uint32_t blockSize = 0;		// DSF のチャンネルあたりのブロック長 (DSDIFF と WSD は 1 バイトずつ交互)
 	bool lsbFirst = false;		// DSF の bits_per_sample == 1
 
