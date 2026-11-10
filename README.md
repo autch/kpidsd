@@ -9,22 +9,29 @@ DSD (DSF / DSDIFF / WSD) を再生する [KbMedia Player](https://hwm5.gyao.ne.j
 対応する DSD は、44.1kHz 系と 48kHz 系のそれぞれ 64〜1024 倍。DSDIFF の DST 圧縮には対応しない。
 利用者向けの説明は `kpidop/kpidop.txt` と `kpid2p/kpid2p.txt` (UTF-8 BOM 付き / CRLF) にある。
 
+以前の libdsd (DSF / DSDIFF / WSD のパーサー) は dsdcore にまとめた。最後の形はコミット 284c38d にある。
+
 以前あった kpidsd.kpi (ASIO の DSD 拡張で DSD を直接出す。本体の対応が要る) はやめた。
 kbasio.kpi が kpidop.kpi の DoP を DSD ネイティブに変換するので要らなくなった。
 
 ## ファイル
 
-- `libdsd/` — DSF / DSDIFF / WSD のヘッダとチャンクのパーサー (静的ライブラリ)
-- `common/` — 両方のプラグインで使う部分
-  - `DsdSource.*` — IKpiFile から DSD を読み、どの形式でもチャンネルごとの MSB first のバイト列にそろえる。タグも設定する
-  - `KpiFileAdapter.h` — libdsd に IKpiFile を読ませるアダプタ
+- `dsdcore/` — 両方のプラグインで使う部分 (静的ライブラリ)
+  - `ParseDSF.cpp`、`ParseDFF.cpp`、`ParseWSD.cpp` — 形式ごとのパーサー。どれも同じ形の `DsdLayout`
+    (周波数、チャンネル数、データの位置と並び、ID3v2 の範囲、タグの文字列) を返す
+  - `DsdLayout.*` — 形式の判定と、パーサーの結果がファイルに収まっているかの検査 (`ValidateDsdLayout`)
+  - `Reader.h` — 位置を指定して読むだけの入力 (IKpiFile 用と、テスト・fuzz 用のメモリ上のもの)
+  - `DsdSource.*` — `DsdLayout` に従って、DSD をチャンネルごとの MSB first のバイト列として読む。タグも設定する
+  - `DsdDecoder.*` — デコーダーの共通部分 (Open、Select、長さ、シーク、例外の受け止め) と、
+    IKpiDecoderModule と kpi_CreateInstance のテンプレート
   - `KpiPartialFile.h` — ID3v2 の範囲を IKpiFile として本体に渡す
   - `kpi_mingw_uuid.h` — MinGW でビルドするときの `__uuidof` 用シム (MSVC では空)
-- `kpidop/` — `KpiDopDecoder.*` (DoP のフレーム)、`KpiDopDecoderModule.*`、`kpidop.cpp`、`kpidop.def`
-- `kpid2p/` — `DsdDecimator.*` (FIR の設計と間引き)、`KpiD2pDecoder.*`、`KpiD2pDecoderModule.*`、`kpid2p.cpp`、`kpid2p.def`
+- `kpidop/` — `KpiDopDecoder.*` (DoP のフレーム)、`kpidop.cpp` (プラグインの情報とエントリポイント)、`kpidop.def`
+- `kpid2p/` — `DsdDecimator.*` (FIR の設計と間引き)、`KpiD2pDecoder.*`、`kpid2p.cpp`、`kpid2p.def`
 - `kpisdk/` — KbMedia Player プラグイン SDK のヘッダ (2026/10/31 版、v3.17beta3 用、原本のまま)
 - `tools/kpi-render.cpp` — 検証用ホスト。ビルドした .kpi をロードして PCM やタグを書き出す
 - `tools/fixtures.py` — テスト用の DSF / DSDIFF / WSD を合成し、kpi-render の出力を照合する
+- `tools/fuzz-decoder.cpp` — libFuzzer のターゲット (パーサーとデコーダーを直接リンクする)
 
 ## 形式ごとの扱い
 
@@ -119,7 +126,8 @@ Python 3 が要る。fixtures.py は kpi-render を CPU のスレッド数だけ
 - `seek-check-data` — `-DKPIDSD_TEST_DATA=<ディレクトリ>` を指定したときだけ、その下にある
   DSF / DSDIFF / WSD をすべて seek-check する
 
-kpi-render は単体でも使える。
+kpi-render は単体でも使える。ファイルは全部メモリに読まずに IKpiFile として読み、`--seek-check` も曲全体を
+メモリに持たない (基準用にもう 1 つデコーダーを開いて並べて Render する) ので、x86 でも大きなファイルを扱える。
 
 ```
 kpi-render [-k PLUGIN] [-r RATE] [-b BITS] [-n MAXFRAMES] file > out.raw   # プラグインが出したままのバイト列
@@ -156,9 +164,11 @@ build-fuzz/bin/Release/fuzz-decoder.exe -max_len=65536 -max_total_time=300 -jobs
 ```
 
 `corpus` には `make-fixtures` が作った DSF / DSDIFF / WSD を入れておく。vcvars を通した環境で実行する
-(ASan の DLL を見つけるため)。fuzz-decoder はデコーダーのソースを直接リンクし、タグ取得用の Open と、
+(ASan の DLL を見つけるため)。fuzz-decoder はパーサーとデコーダーのソースを直接リンクする。入力ごとに、
+パーサーだけをメモリ上で試し (結果が `ValidateDsdLayout` を通るか)、タグ取得用の Open と、
 kpidop / kpid2p のデコード用の Open、Select、いろいろな位置への Seek と Render を行う。
-2026-11-10 に 16 並列で 10 分 (約 174 万回) 回して、問題は出なかった。
+2026-11-10 に 16 並列で 10 分 (約 174 万回)、dsdcore にまとめた後にもう一度 5 分 (約 76 万回) 回して、
+問題は出なかった。
 
 ## 配布
 
@@ -168,4 +178,4 @@ GitHub Actions (`.github/workflows/build.yml`) が x64 / x86 を MSVC でビル�
 
 ## ライセンス
 
-MIT ライセンス。`COPYING`、`kpidop/COPYING`、`kpid2p/COPYING`、`libdsd/COPYING` を参照。
+MIT ライセンス。`COPYING`、`kpidop/COPYING`、`kpid2p/COPYING` を参照。
