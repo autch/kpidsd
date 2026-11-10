@@ -11,7 +11,8 @@
 //   cpRequest と ppMediaInfo を NULL にする。
 // --seek-check はいろいろな位置にシークしてから半端な長さで Render() した結果が、
 //   先頭から続けて Render() した結果と一致するかを確かめる。どちらのプラグインも出力は
-//   位置だけで決まるので、シーク直後から一致しなければならない。
+//   位置だけで決まるので、シーク直後から一致しなければならない。曲全体はメモリに持たず、基準用に
+//   もう 1 つデコーダーを開いて並べて Render() する。
 //   DoP (dwFormatType == FORMAT_DOP) ではマーカーのバイトを除いて比べ、マーカーはシークを
 //   またいでも 0x05 / 0xFA が交互に続くことを確かめる。
 // -r / -b は cpRequest の dwSampleRate / nBitsPerSample (既定は 0 / -64)。
@@ -39,32 +40,51 @@
 
 namespace
 {
-	class MemoryFile : public KbKpiFileImpl
+	// ファイルを開いたまま読む (大きなファイルを全部メモリに読み込まない)。本体の IKpiFile と同じく、
+	// 範囲外への Seek は KPI_FILE_EOF を返す
+	class StdioFile : public KbKpiFileImpl
 	{
 	public:
-		explicit MemoryFile(std::vector<BYTE> data) : data_(std::move(data)) {}
+		static StdioFile* Open(const wchar_t* path)
+		{
+			FILE* fp = _wfopen(path, L"rb");
+			if (fp == nullptr)
+				return nullptr;
+			if (_fseeki64(fp, 0, SEEK_END) != 0)
+			{
+				std::fclose(fp);
+				return nullptr;
+			}
+			const INT64 size = _ftelli64(fp);
+			_fseeki64(fp, 0, SEEK_SET);
+			return new StdioFile(fp, static_cast<UINT64>(size));
+		}
+		~StdioFile() override { std::fclose(fp_); }
 
 		DWORD WINAPI Read(void* pBuffer, DWORD dwSize) override
 		{
-			if (pos_ >= data_.size())
+			if (pos_ >= size_)
 				return 0;
-			const DWORD bytes = static_cast<DWORD>(std::min<UINT64>(dwSize, data_.size() - pos_));
-			std::memcpy(pBuffer, data_.data() + pos_, bytes);
-			pos_ += bytes;
-			return bytes;
+			const DWORD bytes = static_cast<DWORD>(std::min<UINT64>(dwSize, size_ - pos_));
+			const size_t got = std::fread(pBuffer, 1, bytes, fp_);
+			pos_ += got;
+			return static_cast<DWORD>(got);
 		}
 		UINT64 WINAPI Seek(INT64 i64Pos, DWORD dwOrigin) override
 		{
-			const INT64 base = dwOrigin == FILE_BEGIN ? 0 : dwOrigin == FILE_CURRENT ? static_cast<INT64>(pos_) : static_cast<INT64>(data_.size());
-			if (base + i64Pos < 0 || static_cast<UINT64>(base + i64Pos) > data_.size())
+			const INT64 base = dwOrigin == FILE_BEGIN ? 0 : dwOrigin == FILE_CURRENT ? static_cast<INT64>(pos_) : static_cast<INT64>(size_);
+			if (base + i64Pos < 0 || static_cast<UINT64>(base + i64Pos) > size_)
 				return KPI_FILE_EOF;
 			pos_ = static_cast<UINT64>(base + i64Pos);
+			_fseeki64(fp_, static_cast<INT64>(pos_), SEEK_SET);
 			return pos_;
 		}
-		UINT64 WINAPI GetSize() override { return data_.size(); }
+		UINT64 WINAPI GetSize() override { return size_; }
 
 	private:
-		std::vector<BYTE> data_;
+		StdioFile(FILE* fp, UINT64 size) : fp_(fp), size_(size) {}
+		FILE* fp_;
+		UINT64 size_;
 		UINT64 pos_ = 0;
 	};
 
@@ -165,30 +185,16 @@ namespace
 		std::exit(2);
 	}
 
-	bool readFile(const wchar_t* path, std::vector<BYTE>& data)
-	{
-		FILE* fp = _wfopen(path, L"rb");
-		if (!fp)
-			return false;
-		BYTE buf[65536];
-		size_t bytes;
-		while ((bytes = std::fread(buf, 1, sizeof(buf), fp)) > 0)
-			data.insert(data.end(), buf, buf + bytes);
-		std::fclose(fp);
-		return true;
-	}
-
 	// 曲数を返す。失敗したら 0
 	DWORD openDecoder(IKpiDecoderModule* module, const wchar_t* path, const Options& options, IKpiDecoder** ppDecoder)
 	{
 		*ppDecoder = nullptr;
-		std::vector<BYTE> data;
-		if (!readFile(path, data))
+		auto* file = StdioFile::Open(path);
+		if (file == nullptr)
 		{
 			std::fwprintf(stderr, L"%ls: cannot read\n", path);
 			return 0;
 		}
-		auto* file = new MemoryFile(std::move(data));
 
 		KPI_MEDIAINFO request;
 		kpi_InitMediaInfo(&request);
@@ -376,15 +382,40 @@ namespace
 		return true;
 	}
 
+	// Render() を繰り返して frames フレーム読み捨てる。読めたフレーム数を返す
+	size_t skipFrames(IKpiDecoder* decoder, size_t bytesPerFrame, size_t frames, std::vector<BYTE>& scratch)
+	{
+		size_t done = 0;
+		while (done < frames)
+		{
+			const DWORD request = static_cast<DWORD>(std::min<size_t>(frames - done, 65536));
+			scratch.resize(static_cast<size_t>(request) * bytesPerFrame);
+			const DWORD rendered = decoder->Render(scratch.data(), request);
+			done += rendered;
+			if (rendered < request)
+				break;
+		}
+		return done;
+	}
+
+	// 曲全体をメモリに持たないように、基準用にもう 1 つデコーダーを開き、並べて Render() して比べる
 	int seekCheck(IKpiDecoderModule* module, const wchar_t* path, const Options& options)
 	{
 		IKpiDecoder* decoder = nullptr;
+		IKpiDecoder* reference = nullptr;
 		if (openDecoder(module, path, options, &decoder) == 0)
 			return 1;
-		const KPI_MEDIAINFO* media = selectTrack(decoder, path, nullptr);
-		if (media == nullptr)
+		if (openDecoder(module, path, options, &reference) == 0)
 		{
 			decoder->Release();
+			return 1;
+		}
+		const KPI_MEDIAINFO* media = selectTrack(decoder, path, nullptr);
+		const KPI_MEDIAINFO* refMedia = selectTrack(reference, path, nullptr);
+		if (media == nullptr || refMedia == nullptr)
+		{
+			decoder->Release();
+			reference->Release();
 			return 1;
 		}
 		const size_t bytesPerFrame = frameBytes(media);
@@ -392,19 +423,33 @@ namespace
 		const bool dop = media->dwFormatType == KPI_MEDIAINFO::FORMAT_DOP;
 		// qwLength はサンプル数を 100ns 単位に切り捨てたものなので、切り上げて戻す (周波数は 10MHz 未満)
 		const UINT64 total = (media->qwLength * media->dwSampleRate + 10000000 - 1) / 10000000;
-		MarkerCheck markers(bytesPerFrame, bytesPerWord);
+		MarkerCheck markers(bytesPerFrame, bytesPerWord);		// シークする側。シークをまたいでも交互に続く
+		MarkerCheck refMarkers(bytesPerFrame, bytesPerWord);	// 基準の側
+		std::vector<BYTE> out, ref, scratch;
 		int fails = 0;
 
-		// 基準: 先頭から続けて Render() した結果
-		std::vector<BYTE> ref;
-		decoder->Seek(0, KPI_MEDIAINFO::SEEK_FLAGS_SAMPLE);
-		const size_t frames = renderFrames(decoder, bytesPerFrame, ref, static_cast<size_t>(total) + 1000);
+		// 先頭から続けて Render() したときの長さと、DoP のマーカー
+		reference->Seek(0, KPI_MEDIAINFO::SEEK_FLAGS_SAMPLE);
+		size_t frames = 0;
+		size_t refMarkerErrors = 0;
+		for (;;)
+		{
+			const DWORD request = 65536;
+			ref.resize(static_cast<size_t>(request) * bytesPerFrame);
+			const DWORD rendered = reference->Render(ref.data(), request);
+			ref.resize(static_cast<size_t>(rendered) * bytesPerFrame);
+			if (dop)
+				refMarkerErrors += refMarkers.feed(ref);
+			frames += rendered;
+			if (rendered < request || frames > total + 1000)
+				break;
+		}
 		if (frames != total)
 		{
 			std::fwprintf(stderr, L"%ls: rendered %zu frames, the length says %llu\n", path, frames, total);
 			fails++;
 		}
-		if (dop && markers.feed(ref) != 0)
+		if (refMarkerErrors != 0)
 		{
 			std::fwprintf(stderr, L"%ls: DoP markers are broken\n", path);
 			fails++;
@@ -424,31 +469,47 @@ namespace
 				fails++;
 				continue;
 			}
+			// 基準は先頭から Render() して、シーク先まで読み捨てる
+			reference->Seek(0, KPI_MEDIAINFO::SEEK_FLAGS_SAMPLE);
+			skipFrames(reference, bytesPerFrame, static_cast<size_t>(got), scratch);
 
 			// 半端な長さで最後まで Render() して、基準の続きと比べる
-			std::vector<BYTE> out;
 			const size_t rest = static_cast<size_t>(frames - got);
-			const size_t rendered = renderFrames(decoder, bytesPerFrame, out, rest + 100, sizes);
+			size_t rendered = 0;
+			bool differs = false;
+			for (size_t k = 0; ; k++)
+			{
+				const DWORD request = sizes[k % sizes.size()];
+				out.resize(static_cast<size_t>(request) * bytesPerFrame);
+				const DWORD n = decoder->Render(out.data(), request);
+				out.resize(static_cast<size_t>(n) * bytesPerFrame);
+				ref.resize(out.size());
+				const DWORD m = n > 0 ? reference->Render(ref.data(), n) : 0;
+				if (m != n || !sameFrames(out.data(), ref.data(), out.size(), bytesPerWord, dop))
+					differs = true;
+				if (dop && markers.feed(out) != 0)
+				{
+					std::fwprintf(stderr, L"%ls: DoP markers after Seek(%llu) are broken\n", path, pos);
+					fails++;
+				}
+				rendered += n;
+				if (n < request || rendered > rest + 100)
+					break;
+			}
 			if (rendered != rest)
 			{
 				std::fwprintf(stderr, L"%ls: Render after Seek(%llu) gave %zu frames, expected %zu\n", path, pos, rendered, rest);
 				fails++;
-				continue;
 			}
-			if (!sameFrames(out.data(), ref.data() + got * bytesPerFrame, out.size(), bytesPerWord, dop))
+			else if (differs)
 			{
 				std::fwprintf(stderr, L"%ls: PCM after Seek(%llu) differs\n", path, pos);
-				fails++;
-			}
-			// マーカーはシークをまたいでも交互に続く
-			if (dop && markers.feed(out) != 0)
-			{
-				std::fwprintf(stderr, L"%ls: DoP markers after Seek(%llu) are broken\n", path, pos);
 				fails++;
 			}
 		}
 		std::fwprintf(stderr, L"%ls: %ls (%zu frames)\n", path, fails ? L"NG" : L"ok", frames);
 		decoder->Release();
+		reference->Release();
 		return fails ? 1 : 0;
 	}
 

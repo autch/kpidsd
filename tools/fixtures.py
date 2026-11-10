@@ -108,7 +108,7 @@ def make_wsd(planar, rate, text, text_offset=128, data_offset=2048):
     nbytes = len(planar[0])
     interleaved = bytes(planar[ch][i] for i in range(nbytes) for ch in range(channels))
     size = data_offset + len(interleaved)
-    # fileSize は libdsd の ntohllX に合わせて、上位と下位の 32 ビットを入れ替えて書く
+    # fileSize (プラグインは使わない) は、上位と下位の 32 ビットを入れ替えて書く
     general = b"1bit" + bytes(4) + bytes([0x11, 0]) + bytes(2) \
         + struct.pack(">II", size & 0xFFFFFFFF, size >> 32) + struct.pack(">III", text_offset, data_offset, 0)
     spec = struct.pack(">III", 0, rate, 0) + bytes([channels]) + bytes(3) + struct.pack(">I", 0) + bytes(12) \
