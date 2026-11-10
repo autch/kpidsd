@@ -44,7 +44,7 @@ def random_planar(rng, channels, nbytes):
 
 # --- DSF (Sony DSF File Format Specification 1.01、リトルエンディアン) ---
 
-def make_dsf(planar, rate, sample_count, lsb_first=True, id3=None, block=4096):
+def make_dsf(planar, rate, sample_count, lsb_first=True, id3=None, block=4096, id3_pointer=None):
     channels = len(planar)
     nbytes = len(planar[0])
     blocks = (nbytes + block - 1) // block
@@ -60,7 +60,8 @@ def make_dsf(planar, rate, sample_count, lsb_first=True, id3=None, block=4096):
                       1 if lsb_first else 8, sample_count, block, 0)
     data_chunk = struct.pack("<4sQ", b"data", 12 + len(data)) + data
     size = 28 + len(fmt) + len(data_chunk) + (len(id3) if id3 else 0)
-    id3_pointer = 28 + len(fmt) + len(data_chunk) if id3 else 0
+    if id3_pointer is None:
+        id3_pointer = 28 + len(fmt) + len(data_chunk) if id3 else 0
     head = struct.pack("<4sQQQ", b"DSD ", 28, size, id3_pointer)
     return head + fmt + data_chunk + (id3 or b"")
 
@@ -102,11 +103,9 @@ def wsd_field(text, size):
     return text + b" " * (size - len(text))  # 空白で埋める
 
 
-def make_wsd(planar, rate, text):
+def make_wsd(planar, rate, text, text_offset=128, data_offset=2048):
     channels = len(planar)
     nbytes = len(planar[0])
-    text_offset = 128
-    data_offset = 2048
     interleaved = bytes(planar[ch][i] for i in range(nbytes) for ch in range(channels))
     size = data_offset + len(interleaved)
     # fileSize は libdsd の ntohllX に合わせて、上位と下位の 32 ビットを入れ替えて書く
@@ -119,8 +118,9 @@ def make_wsd(planar, rate, text):
               ("genre", 32), ("dateAndTime", 32), ("location", 32), ("comment", 512), ("userSpecific", 512)]
     body = b"".join(wsd_field(text.get(name, b""), n) for name, n in fields) + bytes(160)
     assert len(body) == 1920
-    head = general + spec + body
-    return head + bytes(data_offset - len(head)) + interleaved
+    head = general + spec + (body if text_offset else b"")
+    head += bytes(max(0, data_offset - len(head)))
+    return head[:data_offset] + interleaved
 
 
 def id3v2(title):
@@ -199,13 +199,51 @@ def generate(directory):
          dict(common_tags(DSD64), Title="ＷＳＤの曲", Artist="Artist", Album="アルバム", Composer="作曲者",
               Genre="Classical", Date="2026-11-10", Comment="コメント欄"), {"type": 0})
 
-    # 開けてはいけないもの: DST 圧縮、対応しない周波数
+    # DSF: ID3v2 のポインタが音のデータの途中を指す。本体には渡さない
+    nbytes = 4096 * 2
+    planar = random_planar(rng, 2, nbytes)
+    save("id3_inside_data.dsf", make_dsf(planar, DSD64, nbytes * 8, id3=id3v2("x"), id3_pointer=28 + 52 + 12 + 100),
+         planar, DSD64, common_tags(DSD64), {"type": 0})
+
+    # DSF: ID3v2 のポインタの先が "ID3" で始まらない。本体には渡さない
+    save("id3_no_magic.dsf", make_dsf(planar, DSD64, nbytes * 8, id3=b"XYZ" + bytes(20)),
+         planar, DSD64, common_tags(DSD64), {"type": 0})
+
+    # DSF: 3 ブロック目の途中で切れたファイル (ヘッダの file_size は元のまま)。読めた 2 ブロック分だけ使う
+    nbytes = 4096 * 3
+    planar = random_planar(rng, 2, nbytes)
+    data = make_dsf(planar, DSD64, nbytes * 8)
+    data = data[:28 + 52 + 12 + 4096 * 2 * 2 + 3000]
+    save("truncated.dsf", data, [p[:4096 * 2] for p in planar], DSD64, common_tags(DSD64), {"type": 0})
+
+    # WSD: テキストがない (textOffset = 0)
+    nbytes = 3000
+    planar = random_planar(rng, 1, nbytes)
+    save("no_text.wsd", make_wsd(planar, DSD64, {}, text_offset=0, data_offset=128), planar, DSD64,
+         common_tags(DSD64), {"type": 0})
+
+    # DSDIFF: 仕様にない場所にあるチャンクは使わず、同じチャンクは最初のものを使う
+    #   FRM8 直下の FS (別の周波数)、PROP の中の DSD (偽のデータ)、2 つ目の PROP と DSD と DIIN
+    nbytes = 4001
+    planar = random_planar(rng, 2, nbytes)
+    fake = random_planar(rng, 2, 500)
+    name_ = b"not compressed"
+    prop = b"SND " + chunk(b"FS  ", struct.pack(">I", DSD64))         + chunk(b"CHNL", struct.pack(">H", 2) + b"SLFTSRGT")         + chunk(b"CMPR", b"DSD " + bytes([len(name_)]) + name_)         + chunk(b"DSD ", bytes(fake[0]))
+    prop2 = b"SND " + chunk(b"FS  ", struct.pack(">I", DSD64 * 2)) + chunk(b"CHNL", struct.pack(">H", 1) + b"C   ")
+    interleave = lambda pl: bytes(pl[ch][i] for i in range(len(pl[0])) for ch in range(len(pl)))
+    body = b"DSD " + chunk(b"FVER", struct.pack(">I", 0x01050000)) + chunk(b"FS  ", struct.pack(">I", DSD64 * 4))         + chunk(b"PROP", prop) + chunk(b"PROP", prop2)         + chunk(b"DIIN", chunk(b"DITI", struct.pack(">I", 5) + b"first") + chunk(b"DSD ", interleave(fake)))         + chunk(b"DSD ", interleave(planar)) + chunk(b"DSD ", interleave(fake))         + chunk(b"DIIN", chunk(b"DITI", struct.pack(">I", 6) + b"second"))
+    save("misplaced_chunks.dff", chunk(b"FRM8", body), planar, DSD64,
+         dict(common_tags(DSD64), Title="first"), {"type": 0})
+
+    # 開けてはいけないもの: DST 圧縮、対応しない周波数、WSD のデータとテキストが重なる
     planar = random_planar(rng, 2, 1000)
     with open(os.path.join(directory, "dst.dff"), "wb") as f:
         f.write(make_dff(planar, DSD64, compression=b"DST "))
     with open(os.path.join(directory, "bad_rate.dsf"), "wb") as f:
         f.write(make_dsf(planar, 1000000, 8000))
-    expect["_invalid"] = ["dst.dff", "bad_rate.dsf"]
+    with open(os.path.join(directory, "text_overlaps_data.wsd"), "wb") as f:
+        f.write(make_wsd(planar, DSD64, {"title": b"t"}, text_offset=128, data_offset=1024))
+    expect["_invalid"] = ["dst.dff", "bad_rate.dsf", "text_overlaps_data.wsd"]
 
     with open(os.path.join(directory, "expect.json"), "w", encoding="utf-8") as f:
         json.dump(expect, f, ensure_ascii=False, indent=1)
