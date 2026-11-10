@@ -111,15 +111,15 @@ def wsd_field(text, size):
     return text + b" " * (size - len(text))  # 空白で埋める
 
 
-def make_wsd(planar, rate, text, text_offset=128, data_offset=2048):
+def make_wsd(planar, rate, text, text_offset=128, data_offset=2048, version=0x11, ch_reserved=0):
     channels = len(planar)
     nbytes = len(planar[0])
     interleaved = bytes(planar[ch][i] for i in range(nbytes) for ch in range(channels))
     size = data_offset + len(interleaved)
     # fileSize (プラグインは使わない) は、上位と下位の 32 ビットを入れ替えて書く
-    general = b"1bit" + bytes(4) + bytes([0x11, 0]) + bytes(2) \
+    general = b"1bit" + bytes(4) + bytes([version, 0]) + bytes(2) \
         + struct.pack(">II", size & 0xFFFFFFFF, size >> 32) + struct.pack(">III", text_offset, data_offset, 0)
-    spec = struct.pack(">III", 0, rate, 0) + bytes([channels]) + bytes(3) + struct.pack(">I", 0) + bytes(12) \
+    spec = struct.pack(">III", 0, rate, 0) + bytes([ch_reserved << 4 | channels]) + bytes(3) + struct.pack(">I", 0) + bytes(12) \
         + struct.pack(">II", 0, 0) + bytes(16) + bytes(40)
     assert len(general) == 32 and len(spec) == 96
     fields = [("title", 128), ("composer", 128), ("songWriter", 128), ("artist", 128), ("album", 128),
@@ -262,6 +262,13 @@ def generate(directory):
     # DSDIFF: FVER がない。仕様では必須だが、なくても開く
     save("no_fver.dff", make_dff(planar, DSD64, version=None), planar, DSD64, common_tags(DSD64), {"type": 0})
 
+    # WSD: Ch_N の上位 4 ビット (予約) が立っている。チャンネル数は下位 4 ビットだけ
+    planar = random_planar(rng, 2, 2001)
+    save("ch_reserved.wsd", make_wsd(planar, DSD64, {}, ch_reserved=0xA), planar, DSD64, common_tags(DSD64), {"type": 0})
+
+    # WSD: Version 1.0 (10h)。1.x は同じ形
+    save("version10.wsd", make_wsd(planar, DSD64, {}, version=0x10), planar, DSD64, common_tags(DSD64), {"type": 0})
+
     # 開けてはいけないもの: DST 圧縮、対応しない周波数、WSD のデータとテキストが重なる
     planar = random_planar(rng, 2, 1000)
     with open(os.path.join(directory, "dst.dff"), "wb") as f:
@@ -273,7 +280,10 @@ def generate(directory):
     # DSDIFF の主バージョンが 2 (1.x と同じ形とは限らない)
     with open(os.path.join(directory, "version2.dff"), "wb") as f:
         f.write(make_dff(planar, DSD64, version=0x02000000))
-    expect["_invalid"] = ["dst.dff", "bad_rate.dsf", "text_overlaps_data.wsd", "version2.dff"]
+    # WSD の Version 2.0 (20h)
+    with open(os.path.join(directory, "version2.wsd"), "wb") as f:
+        f.write(make_wsd(planar, DSD64, {}, version=0x20))
+    expect["_invalid"] = ["dst.dff", "bad_rate.dsf", "text_overlaps_data.wsd", "version2.dff", "version2.wsd"]
 
     with open(os.path.join(directory, "expect.json"), "w", encoding="utf-8") as f:
         json.dump(expect, f, ensure_ascii=False, indent=1)

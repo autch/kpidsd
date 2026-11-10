@@ -3,6 +3,9 @@
 //   0  General Information (32): "1bit"  reserved (4)  version (1)  reserved (3)  file size (8)
 //                                text offset (4)  data offset (4)  reserved (4)
 //  32  Data Spec (96): playback time (4)  sampling frequency (4)  reserved (4)  channels (1) ...
+//      version は 09h、10h、11h のように上位 4 ビットが主バージョン。2.0 以上はポインタの意味や
+//      文字コードが変わってよいことになっているので開かない
+//      channels は下位 4 ビットだけがチャンネル数 (上位 4 ビットは予約)
 //      Text (1920): text offset から。0 ならテキストはない
 //      データ: data offset からファイルの終わりまで、1 バイトずつチャンネルが交互に並ぶ (MSB first)
 
@@ -34,6 +37,8 @@ bool ParseWSD(Reader& reader, DsdLayout& layout)
 	uint8_t h[HeaderSize];
 	if (!reader.ReadAt(0, h, sizeof h) || std::memcmp(h, "1bit", 4) != 0)
 		return false;
+	if ((h[8] >> 4) >= 2)
+		return false;
 
 	// ヘッダの file size は見ない。データはヘッダ (とテキスト) の後ろからファイルの終わりまで
 	const uint64_t fileSize = reader.Size();
@@ -46,7 +51,7 @@ bool ParseWSD(Reader& reader, DsdLayout& layout)
 
 	layout.format = DsdFormat::WSD;
 	layout.sampleRate = ReadBE32(h + 36);
-	layout.channels = h[44];
+	layout.channels = h[44] & 0x0F;
 	layout.dataOffset = dataOffset;
 	layout.blockSize = 1;
 	if (layout.channels == 0)
