@@ -44,7 +44,7 @@ def random_planar(rng, channels, nbytes):
 
 # --- DSF (Sony DSF File Format Specification 1.01、リトルエンディアン) ---
 
-def make_dsf(planar, rate, sample_count, lsb_first=True, id3=None, block=4096, id3_pointer=None):
+def make_dsf(planar, rate, sample_count, lsb_first=True, id3=None, block=4096, id3_pointer=None, fmt_extra=b""):
     channels = len(planar)
     nbytes = len(planar[0])
     blocks = (nbytes + block - 1) // block
@@ -56,8 +56,8 @@ def make_dsf(planar, rate, sample_count, lsb_first=True, id3=None, block=4096, i
                 chunk = chunk.translate(BITREV)
             data += chunk + bytes(block - len(chunk))  # 最後のブロックは 0 で埋める
     channel_type = {1: 1, 2: 2, 3: 3, 4: 4, 5: 6, 6: 7}[channels]
-    fmt = struct.pack("<4sQIIIIIIQII", b"fmt ", 52, 1, 0, channel_type, channels, rate,
-                      1 if lsb_first else 8, sample_count, block, 0)
+    fmt = struct.pack("<4sQIIIIIIQII", b"fmt ", 52 + len(fmt_extra), 1, 0, channel_type, channels, rate,
+                      1 if lsb_first else 8, sample_count, block, 0) + fmt_extra
     data_chunk = struct.pack("<4sQ", b"data", 12 + len(data)) + data
     size = 28 + len(fmt) + len(data_chunk) + (len(id3) if id3 else 0)
     if id3_pointer is None:
@@ -72,7 +72,9 @@ def chunk(ckid, body):
     return struct.pack(">4sQ", ckid, len(body)) + body + (b"\0" if len(body) & 1 else b"")
 
 
-def make_dff(planar, rate, compression=b"DSD ", title=None, artist=None, comment=None, id3=None):
+def make_dff(planar, rate, compression=b"DSD ", title=None, artist=None, comment=None, id3=None,
+             comments=None, version=0x01050000):
+    """comments は (cmtType, cmtRef, 文字列) の並び。comment は General Comment 1 つだけのとき用"""
     channels = len(planar)
     nbytes = len(planar[0])
     name = b"not compressed" if compression == b"DSD " else b"DST Encoded"
@@ -80,9 +82,15 @@ def make_dff(planar, rate, compression=b"DSD ", title=None, artist=None, comment
     prop = b"SND " + chunk(b"FS  ", struct.pack(">I", rate)) \
         + chunk(b"CHNL", struct.pack(">H", channels) + b"".join(ids)) \
         + chunk(b"CMPR", compression + bytes([len(name)]) + name)
-    body = b"DSD " + chunk(b"FVER", struct.pack(">I", 0x01050000)) + chunk(b"PROP", prop)
+    body = b"DSD " + (chunk(b"FVER", struct.pack(">I", version)) if version is not None else b"") + chunk(b"PROP", prop)
     if comment is not None:
-        body += chunk(b"COMT", struct.pack(">H", 1) + struct.pack(">HBBBBHHI", 2026, 11, 10, 12, 0, 0, 0, len(comment)) + comment)
+        comments = [(0, 0, comment)]
+    if comments is not None:
+        comt = struct.pack(">H", len(comments))
+        for type_, ref, text in comments:
+            # 文字列は偶数長になるよう詰め物を付ける (count には含めない)
+            comt += struct.pack(">HBBBBHHI", 2026, 11, 10, 12, 0, type_, ref, len(text)) + text + b"\0" * (len(text) & 1)
+        body += chunk(b"COMT", comt)
     interleaved = bytes(planar[ch][i] for i in range(nbytes) for ch in range(channels))
     body += chunk(b"DSD ", interleaved)
     if title is not None or artist is not None:
@@ -235,6 +243,25 @@ def generate(directory):
     save("misplaced_chunks.dff", chunk(b"FRM8", body), planar, DSD64,
          dict(common_tags(DSD64), Title="first"), {"type": 0})
 
+    # DSF: fmt チャンクが 52 バイトより長い (仕様では "Usually 52bytes")。後ろの 8 バイトは飛ばす
+    nbytes = 5000
+    planar = random_planar(rng, 2, nbytes)
+    save("long_fmt.dsf", make_dsf(planar, DSD64, nbytes * 8, fmt_extra=b"\xAA" * 8), planar, DSD64,
+         common_tags(DSD64), {"type": 0})
+
+    # DSDIFF: コメントが File History、General の順に並ぶ。General を使う (奇数長の文字列の詰め物も飛ばす)
+    planar = random_planar(rng, 2, 3001)
+    save("comments.dff", make_dff(planar, DSD64, comments=[(3, 2, b"User Identification"), (3, 1, b"Program X"),
+                                                          (0, 0, b"album comment"), (0, 0, b"second")]),
+         planar, DSD64, dict(common_tags(DSD64), Comment="album comment"), {"type": 0})
+
+    # DSDIFF: General Comment がない。最初のコメントを使う
+    save("history_only.dff", make_dff(planar, DSD64, comments=[(3, 2, b"operator"), (2, 0, b"DSD recording")]),
+         planar, DSD64, dict(common_tags(DSD64), Comment="operator"), {"type": 0})
+
+    # DSDIFF: FVER がない。仕様では必須だが、なくても開く
+    save("no_fver.dff", make_dff(planar, DSD64, version=None), planar, DSD64, common_tags(DSD64), {"type": 0})
+
     # 開けてはいけないもの: DST 圧縮、対応しない周波数、WSD のデータとテキストが重なる
     planar = random_planar(rng, 2, 1000)
     with open(os.path.join(directory, "dst.dff"), "wb") as f:
@@ -243,7 +270,10 @@ def generate(directory):
         f.write(make_dsf(planar, 1000000, 8000))
     with open(os.path.join(directory, "text_overlaps_data.wsd"), "wb") as f:
         f.write(make_wsd(planar, DSD64, {"title": b"t"}, text_offset=128, data_offset=1024))
-    expect["_invalid"] = ["dst.dff", "bad_rate.dsf", "text_overlaps_data.wsd"]
+    # DSDIFF の主バージョンが 2 (1.x と同じ形とは限らない)
+    with open(os.path.join(directory, "version2.dff"), "wb") as f:
+        f.write(make_dff(planar, DSD64, version=0x02000000))
+    expect["_invalid"] = ["dst.dff", "bad_rate.dsf", "text_overlaps_data.wsd", "version2.dff"]
 
     with open(os.path.join(directory, "expect.json"), "w", encoding="utf-8") as f:
         json.dump(expect, f, ensure_ascii=False, indent=1)

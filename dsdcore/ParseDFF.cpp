@@ -5,9 +5,9 @@
 // 同じチャンクが 2 つ以上あれば最初のものを使う。
 //
 //   FRM8 ('DSD ')
-//     FVER
+//     FVER           主バージョン (最上位バイト) が 1 でなければ開かない。なくても開く
 //     PROP ('SND ')  FS  CHNL  CMPR  (ABSS、LSCO などは使わない)
-//     COMT           最初のコメントだけ使う
+//     COMT           最初の General (album) Comment (cmtType 0) を使う。なければ最初のコメント
 //     DSD            データ。1 バイトずつチャンネルが交互に並ぶ (MSB first)
 //     DIIN           DIAR (アーティスト)  DITI (タイトル)
 //     ID3            非公式。ID3v2 タグ。あれば DIIN と COMT は使わない
@@ -55,6 +55,9 @@ namespace
 
 			// DST で圧縮されたものと、必要なチャンクがないものは開かない
 			if (!fs_ || !chnl_ || compression_ != id("DSD ") || !dsd_)
+				return false;
+			// 主バージョンが同じなら読める (後方互換)。違うものは形が変わっているかもしれない
+			if (fver_ && majorVersion_ != 1)
 				return false;
 			layout.format = DsdFormat::DFF;
 			layout.sampleRate = sampleRate_;
@@ -146,12 +149,15 @@ namespace
 				dataOffset_ = chunk.data;
 				dataSize_ = chunk.size;
 			}
+			else if (chunk.id == id("FVER") && !fver_ && read(chunk, 0, b, 4))
+			{
+				fver_ = true;
+				majorVersion_ = b[0];
+			}
 			else if (chunk.id == id("COMT") && !comt_)
 			{
-				// numComments (2)、最初のコメント: 時刻 (6)、cmtType (2)、cmtRef (2)、count (4)、文字列
 				comt_ = true;
-				if (read(chunk, 0, b, 2) && ReadBE16(b) > 0 && read(chunk, 2, b, 14))
-					comment_ = text(chunk, 16, ReadBE32(b + 10));
+				comment_ = comment(chunk);
 			}
 			else if (chunk.id == id("DIIN") && !diin_)
 			{
@@ -164,6 +170,31 @@ namespace
 				id3Offset_ = chunk.data;
 				id3Size_ = chunk.size;
 			}
+		}
+
+		// numComments (2) に続いて、コメントが並ぶ。1 つのコメントは
+		// 時刻 (6)、cmtType (2)、cmtRef (2)、count (4)、文字列 (偶数長になるよう詰め物が付く)
+		std::string comment(const Chunk& chunk)
+		{
+			constexpr uint64_t CommentHeaderSize = 14;
+			uint8_t b[CommentHeaderSize];
+			if (!read(chunk, 0, b, 2))
+				return {};
+			const unsigned count = ReadBE16(b);
+			uint64_t pos = 2;
+			std::string first;
+			for (unsigned i = 0; i < count && read(chunk, pos, b, sizeof b); i++)
+			{
+				const uint16_t type = ReadBE16(b + 6);
+				const uint32_t length = ReadBE32(b + 10);
+				const uint64_t textPos = pos + CommentHeaderSize;
+				if (type == 0)
+					return text(chunk, textPos, length);		// General (album) Comment
+				if (i == 0)
+					first = text(chunk, textPos, length);
+				pos = textPos + length + (length & 1);
+			}
+			return first;
 		}
 
 		void propChild(const Chunk& chunk)
@@ -204,7 +235,8 @@ namespace
 		Reader& reader_;
 		size_t chunks_ = 0;
 		bool prop_ = false, fs_ = false, chnl_ = false, cmpr_ = false, dsd_ = false;
-		bool comt_ = false, diin_ = false, diar_ = false, diti_ = false, id3_ = false;
+		bool comt_ = false, diin_ = false, diar_ = false, diti_ = false, id3_ = false, fver_ = false;
+		uint8_t majorVersion_ = 0;
 		uint32_t sampleRate_ = 0, channels_ = 0, compression_ = 0;
 		uint64_t dataOffset_ = 0, dataSize_ = 0, id3Offset_ = 0, id3Size_ = 0;
 		std::string title_, artist_, comment_;
