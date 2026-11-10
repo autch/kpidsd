@@ -6,9 +6,10 @@
 
 namespace
 {
-	// DoP open Standard v1.1: マーカーは 0x05 と 0xFA をフレームごとに交互に使う (全チャンネル同じ値)
+	// DoP open Standard v1.1: マーカーは 0x05 と 0xFA をフレームごとに交互に使う (全チャンネル同じ値)。
+	// 0xFA は 0x05 のビット反転なので、ビットを反転するだけで交互になる
 	constexpr uint8_t DopMarker1 = 0x05;
-	constexpr uint8_t DopMarker2 = 0xFA;
+	static_assert(static_cast<uint8_t>(~DopMarker1) == 0xFA);
 	constexpr uint8_t DsdSilence = 0x69;	// DSD の無音パターン
 	constexpr size_t ChunkFrames = 8192;
 }
@@ -75,7 +76,7 @@ DWORD KpiDopDecoder::render(BYTE* pBuffer, DWORD dwSizeSample)
 				*out++ = p[0];
 				*out++ = marker;
 			}
-			marker = marker == DopMarker1 ? DopMarker2 : DopMarker1;
+			marker = static_cast<uint8_t>(~marker);
 		}
 		frame += usable;
 		done += static_cast<DWORD>(usable);
