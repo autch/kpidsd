@@ -236,6 +236,15 @@ def generate(directory):
     save("cut_then_id3.dsf", bytes(data), [p[:4096] for p in planar], DSD64, common_tags(DSD64),
          {"type": 1, "data": tag.hex()})
 
+    # DSF: 壊れた ID3v2 のポインタが音の途中を指し、その音がたまたま "ID3" で始まる。ヘッダの長さが
+    # ファイルに収まらないので ID3v2 とはみなさず、音は切り詰めない (MSB first なので音のバイトがそのまま入る)
+    nbytes = 4096 * 2
+    planar = random_planar(rng, 1, nbytes)
+    planar[0] = planar[0][:4096] + b"ID3\x03\x00\x00\x7f\x7f\x7f\x7f" + planar[0][4096 + 10:]
+    save("id3_magic_in_data.dsf", make_dsf(planar, DSD64, nbytes * 8, lsb_first=False,
+                                           id3_pointer=28 + 52 + 12 + 4096),
+         planar, DSD64, common_tags(DSD64), {"type": 0})
+
     # DSF: ブロック長 1 (仕様は 4096 だけ) の LSB first。ブロック長 4096 と同じ音になる
     nbytes = 3001
     planar = random_planar(rng, 2, nbytes)

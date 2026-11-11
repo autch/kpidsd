@@ -18,6 +18,23 @@ namespace
 	constexpr size_t DsdChunkSize = 28;
 	constexpr size_t FmtSize = 52;			// fmt チャンクのうち使う部分 (ヘッダを含む)
 	constexpr uint64_t MaxFmtSize = 4096;	// これより長い fmt チャンクは壊れているとみなす
+
+	// pointer から ID3v2 タグが始まり、宣言された長さがファイルに収まるか。
+	// ヘッダ (10): "ID3"  版 (2) = 2〜4 と改訂 (0xFF ではない)  フラグ (1)  長さ (4、各バイト 7 ビットの syncsafe)。
+	// 長さはヘッダを含まず、フッタ (フラグの bit 4) があればさらに 10 バイト
+	bool IsId3v2At(Reader& reader, uint64_t pointer, uint64_t fileSize)
+	{
+		uint8_t h[10];
+		if (pointer >= fileSize || fileSize - pointer < sizeof h || !reader.ReadAt(pointer, h, sizeof h))
+			return false;
+		if (std::memcmp(h, "ID3", 3) != 0 || h[3] < 2 || h[3] > 4 || h[4] == 0xFF)
+			return false;
+		if ((h[6] | h[7] | h[8] | h[9]) & 0x80)
+			return false;
+		const uint64_t size = (static_cast<uint64_t>(h[6]) << 21) | (h[7] << 14) | (h[8] << 7) | h[9];
+		const uint64_t total = sizeof h + size + ((h[5] & 0x10) ? 10 : 0);
+		return total <= fileSize - pointer;
+	}
 }
 
 bool ParseDSF(Reader& reader, DsdLayout& layout)
@@ -63,13 +80,13 @@ bool ParseDSF(Reader& reader, DsdLayout& layout)
 	uint64_t dataBytes = std::min(declared, available);
 	const uint64_t blockBytes = static_cast<uint64_t>(layout.blockSize) * layout.channels;
 
-	// ID3v2 は、ポインタがヘッダより後ろを指し、その先が "ID3" で始まるときだけ使う。
-	// その位置を音のデータの終わりとみなしてから、完全なブロックを数える。音が途中で切れ、
-	// 直後に長い ID3v2 があると、宣言どおりの長さがファイルに収まってしまい、ID3v2 を音として読むため
+	// ID3v2 は、ポインタがヘッダより後ろを指し、その先に正しい ID3v2 ヘッダがあって、宣言された
+	// タグの長さがファイルに収まるときだけ使う。その位置を音のデータの終わりとみなしてから、完全な
+	// ブロックを数える。音が途中で切れ、直後に長い ID3v2 があると、宣言どおりの長さがファイルに収まって
+	// しまい、ID3v2 を音として読むため。ヘッダ全体を確かめるのは、壊れたポインタの先の音がたまたま
+	// "ID3" で始まるだけで音を切り詰めないため
 	const uint64_t pointer = ReadLE64(h + 20);
-	uint8_t magic[3];
-	if (pointer >= headerSize && pointer < fileSize && reader.ReadAt(pointer, magic, sizeof magic)
-		&& std::memcmp(magic, "ID3", 3) == 0)
+	if (pointer >= headerSize && IsId3v2At(reader, pointer, fileSize))
 	{
 		dataBytes = std::min(dataBytes, pointer - headerSize);
 		layout.id3Offset = pointer;
