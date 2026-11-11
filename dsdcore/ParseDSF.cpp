@@ -58,22 +58,27 @@ bool ParseDSF(Reader& reader, DsdLayout& layout)
 	// data チャンクの長さは 12 バイトのヘッダを含む。使うのはファイルに収まる完全なブロックだけ
 	const uint64_t fileSize = reader.Size();
 	const uint64_t chunkSize = ReadLE64(d + 4);
-	const uint64_t dataBytes = std::min(chunkSize >= 12 ? chunkSize - 12 : 0, fileSize - headerSize);
+	const uint64_t declared = chunkSize >= 12 ? chunkSize - 12 : 0;
+	const uint64_t available = fileSize - headerSize;
+	uint64_t dataBytes = std::min(declared, available);
 	const uint64_t blockBytes = static_cast<uint64_t>(layout.blockSize) * layout.channels;
-	const uint64_t blocks = dataBytes / blockBytes;
-	const uint64_t sampleCount = ReadLE64(h + 64);
-	layout.bytesPerChannel = std::min(sampleCount / 8 + (sampleCount % 8 != 0), blocks * layout.blockSize);
 
-	// ID3v2 は、ポインタがデータより後ろにあり、"ID3" で始まるときだけ使う
+	// ID3v2 は、ポインタがヘッダより後ろを指し、その先が "ID3" で始まるときだけ使う。
+	// その位置を音のデータの終わりとみなしてから、完全なブロックを数える。音が途中で切れ、
+	// 直後に長い ID3v2 があると、宣言どおりの長さがファイルに収まってしまい、ID3v2 を音として読むため
 	const uint64_t pointer = ReadLE64(h + 20);
-	const uint64_t dataEnd = headerSize + blocks * blockBytes;
 	uint8_t magic[3];
-	if (pointer >= dataEnd && pointer < fileSize && reader.ReadAt(pointer, magic, sizeof magic)
+	if (pointer >= headerSize && pointer < fileSize && reader.ReadAt(pointer, magic, sizeof magic)
 		&& std::memcmp(magic, "ID3", 3) == 0)
 	{
+		dataBytes = std::min(dataBytes, pointer - headerSize);
 		layout.id3Offset = pointer;
 		layout.id3Size = fileSize - pointer;
 	}
+
+	const uint64_t blocks = dataBytes / blockBytes;
+	const uint64_t sampleCount = ReadLE64(h + 64);
+	layout.bytesPerChannel = std::min(sampleCount / 8 + (sampleCount % 8 != 0), blocks * layout.blockSize);
 	layout.encoding = TextEncoding::None;
 	return true;
 }

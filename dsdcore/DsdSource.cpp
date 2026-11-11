@@ -117,7 +117,7 @@ size_t DsdSource::Read(uint8_t* dst, size_t stride, size_t bytes)
 
 	if (blockSize == 1)
 	{
-		// 1 バイトずつチャンネルが交互に並ぶ
+		// 1 バイトずつチャンネルが交互に並ぶ (DSDIFF、WSD、ブロック長 1 の DSF)
 		constexpr size_t chunk = 16384;
 		while (done < bytes)
 		{
@@ -128,7 +128,10 @@ size_t DsdSource::Read(uint8_t* dst, size_t stride, size_t bytes)
 			for (size_t i = 0; i < n; i++)
 			{
 				for (uint32_t ch = 0; ch < channels; ch++)
-					dst[ch * stride + done + i] = raw[i * channels + ch];
+				{
+					const uint8_t b = raw[i * channels + ch];
+					dst[ch * stride + done + i] = layout.lsbFirst ? bitReverse[b] : b;
+				}
 			}
 			position += n;
 			done += n;

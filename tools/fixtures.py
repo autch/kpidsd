@@ -224,6 +224,24 @@ def generate(directory):
     data = data[:28 + 52 + 12 + 4096 * 2 * 2 + 3000]
     save("truncated.dsf", data, [p[:4096 * 2] for p in planar], DSD64, common_tags(DSD64), {"type": 0})
 
+    # DSF: 2 ブロックのはずの音が 1 ブロックで切れ、その直後に 1 ブロックより長い ID3v2 が続く (モノラル)。
+    # ID3v2 を音として読まず、1 ブロック分だけ使い、ID3v2 は本体に渡す
+    nbytes = 4096 * 2
+    planar = random_planar(rng, 1, nbytes)
+    tag = id3v2("cut")
+    tag += bytes(4096 + 100 - len(tag))
+    header = 28 + 52 + 12
+    data = bytearray(make_dsf(planar, DSD64, nbytes * 8)[:header + 4096]) + tag
+    data[20:28] = struct.pack("<Q", header + 4096)
+    save("cut_then_id3.dsf", bytes(data), [p[:4096] for p in planar], DSD64, common_tags(DSD64),
+         {"type": 1, "data": tag.hex()})
+
+    # DSF: ブロック長 1 (仕様は 4096 だけ) の LSB first。ブロック長 4096 と同じ音になる
+    nbytes = 3001
+    planar = random_planar(rng, 2, nbytes)
+    save("block1_lsb.dsf", make_dsf(planar, DSD64, nbytes * 8, block=1), planar, DSD64, common_tags(DSD64),
+         {"type": 0})
+
     # WSD: テキストがない (textOffset = 0)
     nbytes = 3000
     planar = random_planar(rng, 1, nbytes)
