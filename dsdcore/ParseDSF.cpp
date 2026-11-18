@@ -10,6 +10,8 @@
 
 #include "stdafx.h"
 
+#include <vector>
+
 #include "DsdLayout.h"
 #include "Reader.h"
 
@@ -71,6 +73,23 @@ bool ParseDSF(Reader& reader, DsdLayout& layout)
 	layout.dataOffset = headerSize;
 	if (layout.channels == 0 || layout.blockSize == 0)
 		return false;
+
+	// チャンネルの並びは channel type で決まる (仕様の Annotation 1)。どれも WAV と同じ順。
+	// channel type とチャンネル数が合わなければ、標準の配置のまま
+	using namespace Speaker;
+	static const std::vector<uint32_t> types[] = {
+		{},
+		{ FC },							// 1: mono
+		{ FL, FR },						// 2: stereo
+		{ FL, FR, FC },					// 3: 3 channels
+		{ FL, FR, BL, BR },				// 4: quad
+		{ FL, FR, FC, LFE },			// 5: 4 channels
+		{ FL, FR, FC, BL, BR },			// 6: 5 channels
+		{ FL, FR, FC, LFE, BL, BR },	// 7: 5.1 channels
+	};
+	const auto& speakers = types[channelType];
+	if (speakers.size() == layout.channels)
+		SetSpeakerLayout(layout, speakers.data(), speakers.size());
 
 	// data チャンクの長さは 12 バイトのヘッダを含む。使うのはファイルに収まる完全なブロックだけ
 	const uint64_t fileSize = reader.Size();

@@ -285,8 +285,8 @@ namespace
 				decoder->Release();
 				return 1;
 			}
-			std::printf("format=%lu\nrate=%lu\nchannels=%lu\nbits=%d\nlength=%llu\nloop=%llu\nfadeout=%lld\nseekable=%lu\nunit=%lu\n",
-				media->dwFormatType, media->dwSampleRate, media->dwChannels, media->nBitsPerSample,
+			std::printf("format=%lu\nrate=%lu\nchannels=%lu\nspeaker=0x%lx\nbits=%d\nlength=%llu\nloop=%llu\nfadeout=%lld\nseekable=%lu\nunit=%lu\n",
+				media->dwFormatType, media->dwSampleRate, media->dwChannels, media->dwSpeakerConfig, media->nBitsPerSample,
 				media->qwLength, media->qwLoop, static_cast<long long>(media->qwFadeOut), media->dwSeekableFlags, media->dwUnitSample);
 		}
 		for (size_t i = 0; i < tags.calls.size(); i++)

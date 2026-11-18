@@ -77,6 +77,31 @@ DSDIFF フォーマットにおける DST (Direct Stream Transfer) コーデッ�
 - 1bit オーディオコンソーシアム公式サイトの WSD ファイル
 
 
+マルチチャンネル
+----------------
+
+3ch 以上 (7.1ch まで) のファイルは、KbMedia Player 3.17beta6 以降で再生
+できます。それより前の本体では再生できません。9ch 以上のファイルは開き
+ません。
+
+チャンネルの配置は、ファイルの情報から本体に伝えます。
+
+  DSF     Channel Type (mono、stereo、3 channels、quad、4 channels、
+          5 channels、5.1 channels)
+  DSDIFF  CHNL チャンクのチャンネル ID (SLFT/MLFT、SRGT/MRGT、C、LFE、
+          LS、RS。LS/RS はサラウンドの後ろの左右として伝えます)
+  WSD     Channel Assignment (Lf、Lf-middle、Cf、Rf-middle、Rf、LFE、
+          Lr、Cr、Rr)
+
+ファイルの中のチャンネルの並びが WAV と違うとき (WSD の 5.1ch など) は、
+WAV の並びに並べ替えて本体に渡します。配置が分からないとき (DSDIFF の
+C000〜C999 や、WSD の Lr-middle/Rr-middle など) は、ファイルの並びのまま
+渡し、本体はチャンネル数で決まる標準の配置で鳴らします。
+
+3ch 以上の PCM は、出力デバイスが対応していなければ本体がステレオに
+まとめて出力します。
+
+
 対応 OS
 -------
 
@@ -103,7 +128,8 @@ DSDIFF に非公式の ID3 チャンク (FRM8 直下の "ID3 " チャンク) が
 
 ID3 チャンクがなければ、Edited Master Information (DIIN) チャンクにある
 DITI と DIAR チャンクが、それぞれタイトルとアーティストに対応します。
-COMT チャンクがあれば、その中の最初のものがコメントとして使われます。
+COMT チャンクがあれば、その中の最初の General Comment がコメントとして
+使われます。General Comment がなければ最初のコメントを使います。
 DSDIFF の仕様に文字コードの規定がないので、UTF-8 として正しければ UTF-8
 として、そうでなければ Shift_JIS として解釈します。
 
@@ -149,7 +175,9 @@ v1.0.0 (65536)
         初版。KbMedia Player 2.80beta30 以降用
 
 v2.0.0 (131072)
-        KbMedia Player 3.17beta3 のプラグイン SDK でビルドし直した
+        KbMedia Player 3.17beta6 のプラグイン SDK でビルドし直した
+        マルチチャンネルのスピーカーの配置を本体に伝え、WAV の並びに
+        並べ替えるようにした (本体 3.17beta6 以降)。9ch 以上は開かない
         Visual Studio 2026 ランタイムに依存するように修正
         DSD -> PCM 変換を作り直した
         - dsd2pcm (8:1) と SoX Resampler の 2 段をやめ、1 段の FIR で

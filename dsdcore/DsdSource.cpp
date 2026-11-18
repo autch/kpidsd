@@ -129,7 +129,7 @@ size_t DsdSource::Read(uint8_t* dst, size_t stride, size_t bytes)
 			{
 				for (uint32_t ch = 0; ch < channels; ch++)
 				{
-					const uint8_t b = raw[i * channels + ch];
+					const uint8_t b = raw[i * channels + layout.channelOrder[ch]];
 					dst[ch * stride + done + i] = layout.lsbFirst ? bitReverse[b] : b;
 				}
 			}
@@ -158,7 +158,7 @@ size_t DsdSource::Read(uint8_t* dst, size_t stride, size_t bytes)
 		const size_t n = std::min<size_t>(blockSize - offset, bytes - done);
 		for (uint32_t ch = 0; ch < channels; ch++)
 		{
-			const uint8_t* src = raw.data() + static_cast<size_t>(ch) * blockSize + offset;
+			const uint8_t* src = raw.data() + static_cast<size_t>(layout.channelOrder[ch]) * blockSize + offset;
 			uint8_t* out = dst + ch * stride + done;
 			if (layout.lsbFirst)
 			{

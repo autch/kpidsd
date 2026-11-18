@@ -26,9 +26,10 @@ DSD のサンプリング周波数は、44.1kHz 系 (2.8224MHz、5.6448MHz、…
 系 (3.072MHz、6.144MHz、…) のそれぞれ 64 倍から 1024 倍までを受け付けま
 す。DoP の PCM サンプルレートは DSD のサンプリング周波数の 1/16 です。
 
-ステレオ以上のチャンネル数には DAC が対応している必要がありますが、
-KbMedia Player の構造上チャンネル構成を伝える方法が無いため、データの想
-定通りのチャンネル配置では鳴らないことがあります。
+3ch 以上のファイルには DAC と出力デバイスが対応している必要があります。
+DoP は本体がステレオにまとめられないので、出力デバイスが 3ch 以上に対応
+していなければ再生できません (「マルチチャンネル」を参照)。3ch 以上の DSD
+は作者も試せる機器を持っていないので、確認していません。
 
 Roland UA-M10 と FOSTEX HP-A4 (thanks KOH) で確認しています。
 
@@ -110,6 +111,32 @@ DSDIFF フォーマットにおける DST (Direct Stream Transfer) コーデッ�
 - 1bit オーディオコンソーシアム公式サイトの WSD ファイル
 
 
+マルチチャンネル
+----------------
+
+3ch 以上 (7.1ch まで) のファイルは、KbMedia Player 3.17beta6 以降で再生
+できます。それより前の本体では再生できません。9ch 以上のファイルは開き
+ません。
+
+チャンネルの配置は、ファイルの情報から本体に伝えます。
+
+  DSF     Channel Type (mono、stereo、3 channels、quad、4 channels、
+          5 channels、5.1 channels)
+  DSDIFF  CHNL チャンクのチャンネル ID (SLFT/MLFT、SRGT/MRGT、C、LFE、
+          LS、RS。LS/RS はサラウンドの後ろの左右として伝えます)
+  WSD     Channel Assignment (Lf、Lf-middle、Cf、Rf-middle、Rf、LFE、
+          Lr、Cr、Rr)
+
+ファイルの中のチャンネルの並びが WAV と違うとき (WSD の 5.1ch など) は、
+WAV の並びに並べ替えて本体に渡します。配置が分からないとき (DSDIFF の
+C000〜C999 や、WSD の Lr-middle/Rr-middle など) は、ファイルの並びのまま
+渡し、本体はチャンネル数で決まる標準の配置で鳴らします。
+
+DoP の 3ch 以上は、KbMedia Player 本体がステレオにまとめられません。
+出力デバイスと DAC が 3ch 以上の DSD に対応していなければ再生できません。
+ステレオで聞くときは kpid2p.kpi で PCM に変換してください。
+
+
 対応 OS
 -------
 
@@ -141,7 +168,8 @@ DSDIFF に非公式の ID3 チャンク (FRM8 直下の "ID3 " チャンク) が
 
 ID3 チャンクがなければ、Edited Master Information (DIIN) チャンクにある
 DITI と DIAR チャンクが、それぞれタイトルとアーティストに対応します。
-COMT チャンクがあれば、その中の最初のものがコメントとして使われます。
+COMT チャンクがあれば、その中の最初の General Comment がコメントとして
+使われます。General Comment がなければ最初のコメントを使います。
 DSDIFF の仕様に文字コードの規定がないので、UTF-8 として正しければ UTF-8
 として、そうでなければ Shift_JIS として解釈します。
 
@@ -190,7 +218,9 @@ v2.0.1 (131073)
         コピペコードの削減
 
 v2.1.0 (131328)
-        KbMedia Player 3.17beta3 のプラグイン SDK でビルドし直した
+        KbMedia Player 3.17beta6 のプラグイン SDK でビルドし直した
+        マルチチャンネルのスピーカーの配置を本体に伝え、WAV の並びに
+        並べ替えるようにした (本体 3.17beta6 以降)。9ch 以上は開かない
         Visual Studio 2026 ランタイムに依存するように修正
         シークを修正
         - DSF でブロックの先頭 (4096 バイト単位) に丸めていたのをやめ、
@@ -210,6 +240,8 @@ v2.1.0 (131328)
         ようにした
         途中で切れた DSF を、読める分だけ再生するようにした
         テキストのない WSD を開けるようにした
+        DSDIFF のコメントは General Comment を優先するようにした
+        DSF / DSDIFF / WSD の仕様書と照合して、読み方を直した
 
 ----
 Autch

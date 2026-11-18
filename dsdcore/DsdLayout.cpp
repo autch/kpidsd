@@ -1,12 +1,13 @@
 ﻿#include "stdafx.h"
 
+#include <algorithm>
+#include <bit>
+
 #include "DsdLayout.h"
 #include "Reader.h"
 
 namespace
 {
-	// これより多いチャンネル数のファイルは壊れているとみなす
-	constexpr uint32_t MaxChannels = 16;
 	// DSF のブロック長の上限 (仕様では 4096 固定)
 	constexpr uint32_t MaxBlockSize = 1 << 20;
 }
@@ -57,11 +58,51 @@ bool IsSupportedDsdRate(uint32_t rate)
 	return false;
 }
 
+void SetSpeakerLayout(DsdLayout& layout, const uint32_t* speakers, size_t count)
+{
+	layout.speakerConfig = 0;
+	for (uint8_t i = 0; i < MaxDsdChannels; i++)
+		layout.channelOrder[i] = i;
+	if (count < 2 || count > MaxDsdChannels || count != layout.channels)
+		return;
+
+	uint32_t mask = 0;
+	for (size_t i = 0; i < count; i++)
+	{
+		const uint32_t bit = speakers[i];
+		// 1 ビットだけが立ち、ほかのチャンネルと重ならないこと
+		if (bit == 0 || (bit & (bit - 1)) != 0 || (bit & ~Speaker::Defined) != 0 || (mask & bit) != 0)
+			return;
+		mask |= bit;
+	}
+	// ビットの小さい順に並べる
+	std::array<uint8_t, MaxDsdChannels> order = {};
+	for (size_t i = 0; i < count; i++)
+		order[i] = static_cast<uint8_t>(i);
+	std::sort(order.begin(), order.begin() + count, [&](uint8_t a, uint8_t b) { return speakers[a] < speakers[b]; });
+	layout.speakerConfig = mask;
+	layout.channelOrder = order;
+}
+
 bool ValidateDsdLayout(const DsdLayout& layout, uint64_t fileSize)
 {
 	if (layout.format == DsdFormat::None || !IsSupportedDsdRate(layout.sampleRate))
 		return false;
-	if (layout.channels == 0 || layout.channels > MaxChannels)
+	if (layout.channels == 0 || layout.channels > MaxDsdChannels)
+		return false;
+
+	// 配置は、立っているビットの数がチャンネル数と同じで、定義のあるビットだけ。並びは 0〜channels-1 の並べ替え
+	if (layout.speakerConfig != 0 && (std::popcount(layout.speakerConfig) != static_cast<int>(layout.channels)
+		|| (layout.speakerConfig & ~Speaker::Defined) != 0))
+		return false;
+	uint32_t seen = 0;
+	for (uint32_t i = 0; i < layout.channels; i++)
+	{
+		if (layout.channelOrder[i] >= layout.channels)
+			return false;
+		seen |= 1u << layout.channelOrder[i];
+	}
+	if (seen != (1u << layout.channels) - 1)
 		return false;
 	if (layout.blockSize == 0 || layout.blockSize > MaxBlockSize)
 		return false;

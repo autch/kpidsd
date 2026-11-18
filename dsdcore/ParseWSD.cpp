@@ -6,6 +6,7 @@
 //      version は 09h、10h、11h のように上位 4 ビットが主バージョン。2.0 以上はポインタの意味や
 //      文字コードが変わってよいことになっているので開かない
 //      channels は下位 4 ビットだけがチャンネル数 (上位 4 ビットは予約)
+//      channel assignment (48〜51) からスピーカーの配置を決め、WAV の順に並べ替える
 //      Text (1920): text offset から。0 ならテキストはない
 //      データ: data offset からファイルの終わりまで、1 バイトずつチャンネルが交互に並ぶ (MSB first)
 
@@ -57,6 +58,35 @@ bool ParseWSD(Reader& reader, DsdLayout& layout)
 	if (layout.channels == 0)
 		return false;
 	layout.bytesPerChannel = (fileSize - dataOffset) / layout.channels;
+
+	// ストリームのチャンネルは、Ch_Asn (48〜51) の立っているビットの順 (各バイトは上位ビットから、
+	// バイトは 48 から順に) に並ぶ。5.1ch なら Lf Cf Rf LFE Lr Rr なので、WAV の順に並べ替える。
+	// Lr-middle / Rr-middle、予約のビット、サイドの欄 (49、50) は WAV に当たる位置がないので 0 (分からない)
+	{
+		using namespace Speaker;
+		static constexpr uint32_t front[8] = { 0, FL, FLC, FC, FRC, FR, 0, LFE };	// RBP 48、上位ビットから
+		static constexpr uint32_t rear[8] = { 0, BL, 0, BC, 0, BR, 0, 0 };			// RBP 51
+		uint32_t speakers[MaxDsdChannels];
+		size_t count = 0;
+		bool ok = true;
+		for (int byte = 0; byte < 4 && ok; byte++)
+		{
+			for (int bit = 0; bit < 8; bit++)
+			{
+				if ((h[48 + byte] & (0x80 >> bit)) == 0)
+					continue;
+				const uint32_t position = byte == 0 ? front[bit] : byte == 3 ? rear[bit] : 0;
+				if (position == 0 || count == MaxDsdChannels)
+				{
+					ok = false;
+					break;
+				}
+				speakers[count++] = position;
+			}
+		}
+		if (ok)
+			SetSpeakerLayout(layout, speakers, count);
+	}
 
 	layout.encoding = TextEncoding::CP932;
 	if (textOffset != 0)

@@ -17,7 +17,9 @@ bool DsdDecoderBase::Open(const KPI_MEDIAINFO* cpRequest, IKpiFile* pFile)
 	kpi_InitMediaInfo(&info);
 	info.dwNumber = 1;
 	info.dwCount = 1;
-	info.dwChannels = source.Channels();	// 2ch を超えても、そのまま伝える (並べ替えない)
+	// 3ch 以上は本体 v3.17beta6 以降が対応する。配置が分からなければ 0 (チャンネル数で決まる標準の配置)
+	info.dwChannels = source.Channels();
+	info.dwSpeakerConfig = source.Layout().speakerConfig;
 	info.qwLoop = 0;
 	info.qwFadeOut = static_cast<UINT64>(-1);	// 本体の設定に従う
 	// 出力は位置だけで決まるので、サンプル単位で正確にシークできる

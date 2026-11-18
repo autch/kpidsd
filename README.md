@@ -28,7 +28,7 @@ kbasio.kpi が kpidop.kpi の DoP を DSD ネイティブに変換するので�
   - `kpi_mingw_uuid.h` — MinGW でビルドするときの `__uuidof` 用シム (MSVC では空)
 - `kpidop/` — `KpiDopDecoder.*` (DoP のフレーム)、`kpidop.cpp` (プラグインの情報とエントリポイント)、`kpidop.def`
 - `kpid2p/` — `DsdDecimator.*` (FIR の設計と間引き)、`KpiD2pDecoder.*`、`kpid2p.cpp`、`kpid2p.def`
-- `kpisdk/` — KbMedia Player プラグイン SDK のヘッダ (2026/10/31 版、v3.17beta3 用、原本のまま)
+- `kpisdk/` — KbMedia Player プラグイン SDK のヘッダと AI 向けの補足 (2026/11/18 版、v3.17beta6 用、原本のまま)
 - `tools/kpi-render.cpp` — 検証用ホスト。ビルドした .kpi をロードして PCM やタグを書き出す
 - `tools/fixtures.py` — テスト用の DSF / DSDIFF / WSD を合成し、kpi-render の出力を照合する
 - `tools/fuzz-decoder.cpp` — libFuzzer のターゲット (パーサーとデコーダーを直接リンクする)
@@ -45,15 +45,26 @@ KbMedia Player 本体は DSD ファイルのタグを自前では解析しない
 KORG AudioGate は DSDIFF / WSD のタグに非 ASCII の文字があるとタグ自体を書かないので、
 DSDIFF の ID3 チャンクと非 ASCII のタグは合成したファイルでしか確かめていない。
 
-2ch を超えるファイルは、チャンネル数をそのまま本体に伝える (並べ替えない)。
-本体がマルチチャンネルのチャンネル配置の仕様を持っていないため。
+3ch 以上 (8ch まで、本体 v3.17beta6 以降) は、スピーカーの配置を `dwSpeakerConfig` (WAV のチャンネルマスク) で
+本体に伝え、チャンネルを配置のビットの小さい順 (WAV の順) に並べ替えて渡す。パーサーがファイルの各チャンネルの
+位置を調べ (`SetSpeakerLayout`)、`DsdSource` が `channelOrder` のとおりに並べる。9ch 以上は開かない。
+
+| | 配置の出どころ | 並べ替え |
+|---|---|---|
+| DSF | Channel Type (1〜7)。チャンネル数と合わなければ 0 | 要らない (仕様の並びが WAV と同じ) |
+| DSDIFF | CHNL のチャンネル ID。SLFT/MLFT → FL、SRGT/MRGT → FR、C → FC、LFE → LFE、LS/RS → BL/BR。C000〜 などは 0 | ID の順が WAV と違えば並べ替える |
+| WSD | Ch_Asn (48〜51) のビット。Lf-middle/Rf-middle → FLC/FRC、Cr → BC。Lr/Rr-middle やサイドの欄は 0 | ストリームは Ch_Asn のビット順 (5.1ch なら Lf Cf Rf LFE Lr Rr) なので並べ替える |
+
+配置が分からなければ `dwSpeakerConfig` は 0 (チャンネル数で決まる標準の配置) で、ファイルの並びのまま渡す。
+1ch も 0 にする。DoP の 3ch 以上は本体がステレオにまとめられないので、出力デバイスが対応していなければ鳴らない
+(作者は 3ch 以上の DSD DAC を持っていないので、合成したファイルでしか確かめていない)。
 
 仕様書 (DSF 1.01、DSDIFF 1.5 と Recommended Usage) との関係:
 
 - DSF の fmt チャンクの長さは 52 に限らない (仕様では "Usually 52bytes")。長いときは後ろを飛ばして data チャンクを探す
 - DSDIFF の FVER の主バージョンが 1 でなければ開かない。FVER がないファイルは開く
 - WSD の Version_N の主バージョン (上位 4 ビット) が 2 以上なら開かない。Ch_N は下位 4 ビットだけ使う
-- 仕様より広く受け付けるもの: DSF の 5.6MHz を超える周波数、4096 以外のブロック長、6 を超えるチャンネル数、
+- 仕様より広く受け付けるもの: DSF の 5.6MHz を超える周波数、4096 以外のブロック長、6 を超えるチャンネル数 (8 まで)、
   DSDIFF のチャンクの順番 (FVER が最初、PROP が DSD より前)、ASCII でない文字列
 - 対応しないもの: DST 圧縮、4GB を超える DSDIFF を分けた .df0〜.df9、MARK チャンクによるトラックの区切り
 
@@ -157,7 +168,7 @@ KbMedia Player 本体での確認 (認識、再生、シーク、タグの表示
 - DSDIFF は範囲付きの再帰下降で読む。親チャンクごとにその範囲の中だけで子チャンクを読み、子の長さは親の終わりで
   切り詰める。どのチャンクを受け付けるかは (親, 子) の組で決め、仕様にない場所にあるもの (FRM8 直下の FS、
   PROP の中の DSD など) は無視する。同じチャンクが 2 つ以上あれば最初のものを使う。10000 チャンクで読むのをやめる
-- 文字列は 1 つ 64KiB まで。チャンネル数は 16 まで、DSF のブロック長は 1MiB まで
+- 文字列は 1 つ 64KiB まで。チャンネル数は 8 まで (本体の上限)、DSF のブロック長は 1MiB まで
 - DSF の ID3v2 は、ポインタの先に正しい ID3v2 ヘッダ ("ID3"、版 2〜4、syncsafe の長さ) があり、宣言された
   タグの長さがファイルに収まるときだけ本体に渡す。そのときはポインタの位置を音のデータの終わりとみなす
   (音が途中で切れ、直後に ID3v2 が続くファイルで、ID3v2 を音として読まない)

@@ -7,6 +7,7 @@
 //   FRM8 ('DSD ')
 //     FVER           主バージョン (最上位バイト) が 1 でなければ開かない。なくても開く
 //     PROP ('SND ')  FS  CHNL  CMPR  (ABSS、LSCO などは使わない)
+//                    CHNL のチャンネル ID からスピーカーの配置を決め、WAV の順に並べ替える
 //     COMT           最初の General (album) Comment (cmtType 0) を使う。なければ最初のコメント
 //     DSD            データ。1 バイトずつチャンネルが交互に並ぶ (MSB first)
 //     DIIN           DIAR (アーティスト)  DITI (タイトル)
@@ -29,6 +30,23 @@ namespace
 	{
 		return (static_cast<uint32_t>(static_cast<uint8_t>(s[0])) << 24) | (static_cast<uint32_t>(static_cast<uint8_t>(s[1])) << 16)
 			| (static_cast<uint32_t>(static_cast<uint8_t>(s[2])) << 8) | static_cast<uint8_t>(s[3]);
+	}
+
+	// CHNL のチャンネル ID からスピーカーの位置。LS / RS (サラウンド) は、SDK の 5.1ch の標準の配置
+	// (FL FR FC LFE BL BR) に合わせて BL / BR にする。C000〜C999 などの分からない ID は 0
+	uint32_t speaker(uint32_t chId)
+	{
+		using namespace Speaker;
+		switch (chId)
+		{
+		case id("SLFT"): case id("MLFT"): return FL;
+		case id("SRGT"): case id("MRGT"): return FR;
+		case id("C   "): return FC;
+		case id("LFE "): return LFE;
+		case id("LS  "): return BL;
+		case id("RS  "): return BR;
+		default: return 0;
+		}
 	}
 
 	struct Chunk
@@ -65,6 +83,7 @@ namespace
 			layout.dataOffset = dataOffset_;
 			layout.blockSize = 1;
 			layout.bytesPerChannel = channels_ != 0 ? dataSize_ / channels_ : 0;
+			SetSpeakerLayout(layout, speakers_.data(), speakers_.size());
 			layout.encoding = TextEncoding::UTF8OrCP932;
 			if (id3_)
 			{
@@ -208,7 +227,11 @@ namespace
 			else if (chunk.id == id("CHNL") && !chnl_ && read(chunk, 0, b, 2))
 			{
 				chnl_ = true;
-				channels_ = ReadBE16(b);	// チャンネルの並び (ID) は使わない
+				channels_ = ReadBE16(b);
+				// チャンネル ID (4 バイトずつ) からスピーカーの位置を決める。分からない ID は 0
+				speakers_.clear();
+				for (uint32_t i = 0; i < channels_ && i < MaxDsdChannels && read(chunk, 2 + i * 4, b, 4); i++)
+					speakers_.push_back(speaker(ReadBE32(b)));
 			}
 			else if (chunk.id == id("CMPR") && !cmpr_ && read(chunk, 0, b, 4))
 			{
@@ -240,6 +263,7 @@ namespace
 		uint32_t sampleRate_ = 0, channels_ = 0, compression_ = 0;
 		uint64_t dataOffset_ = 0, dataSize_ = 0, id3Offset_ = 0, id3Size_ = 0;
 		std::string title_, artist_, comment_;
+		std::vector<uint32_t> speakers_;	// CHNL のチャンネルごとのスピーカーの位置 (最大 MaxDsdChannels 個)
 	};
 }
 

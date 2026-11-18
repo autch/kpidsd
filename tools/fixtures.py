@@ -44,7 +44,8 @@ def random_planar(rng, channels, nbytes):
 
 # --- DSF (Sony DSF File Format Specification 1.01、リトルエンディアン) ---
 
-def make_dsf(planar, rate, sample_count, lsb_first=True, id3=None, block=4096, id3_pointer=None, fmt_extra=b""):
+def make_dsf(planar, rate, sample_count, lsb_first=True, id3=None, block=4096, id3_pointer=None, fmt_extra=b"",
+             channel_type=None):
     channels = len(planar)
     nbytes = len(planar[0])
     blocks = (nbytes + block - 1) // block
@@ -55,7 +56,8 @@ def make_dsf(planar, rate, sample_count, lsb_first=True, id3=None, block=4096, i
             if lsb_first:
                 chunk = chunk.translate(BITREV)
             data += chunk + bytes(block - len(chunk))  # 最後のブロックは 0 で埋める
-    channel_type = {1: 1, 2: 2, 3: 3, 4: 4, 5: 6, 6: 7}[channels]
+    if channel_type is None:
+        channel_type = {1: 1, 2: 2, 3: 3, 4: 4, 5: 6, 6: 7}.get(channels, 2)
     fmt = struct.pack("<4sQIIIIIIQII", b"fmt ", 52 + len(fmt_extra), 1, 0, channel_type, channels, rate,
                       1 if lsb_first else 8, sample_count, block, 0) + fmt_extra
     data_chunk = struct.pack("<4sQ", b"data", 12 + len(data)) + data
@@ -73,12 +75,13 @@ def chunk(ckid, body):
 
 
 def make_dff(planar, rate, compression=b"DSD ", title=None, artist=None, comment=None, id3=None,
-             comments=None, version=0x01050000):
+             comments=None, version=0x01050000, ids=None):
     """comments は (cmtType, cmtRef, 文字列) の並び。comment は General Comment 1 つだけのとき用"""
     channels = len(planar)
     nbytes = len(planar[0])
     name = b"not compressed" if compression == b"DSD " else b"DST Encoded"
-    ids = [b"SLFT", b"SRGT", b"C   ", b"LFE ", b"LS  ", b"RS  "][:channels] if channels > 1 else [b"C   "]
+    if ids is None:
+        ids = [b"SLFT", b"SRGT", b"C   ", b"LFE ", b"LS  ", b"RS  "][:channels] if channels > 1 else [b"C   "]
     prop = b"SND " + chunk(b"FS  ", struct.pack(">I", rate)) \
         + chunk(b"CHNL", struct.pack(">H", channels) + b"".join(ids)) \
         + chunk(b"CMPR", compression + bytes([len(name)]) + name)
@@ -111,7 +114,7 @@ def wsd_field(text, size):
     return text + b" " * (size - len(text))  # 空白で埋める
 
 
-def make_wsd(planar, rate, text, text_offset=128, data_offset=2048, version=0x11, ch_reserved=0):
+def make_wsd(planar, rate, text, text_offset=128, data_offset=2048, version=0x11, ch_reserved=0, ch_asn=0):
     channels = len(planar)
     nbytes = len(planar[0])
     interleaved = bytes(planar[ch][i] for i in range(nbytes) for ch in range(channels))
@@ -119,7 +122,7 @@ def make_wsd(planar, rate, text, text_offset=128, data_offset=2048, version=0x11
     # fileSize (プラグインは使わない) は、上位と下位の 32 ビットを入れ替えて書く
     general = b"1bit" + bytes(4) + bytes([version, 0]) + bytes(2) \
         + struct.pack(">II", size & 0xFFFFFFFF, size >> 32) + struct.pack(">III", text_offset, data_offset, 0)
-    spec = struct.pack(">III", 0, rate, 0) + bytes([ch_reserved << 4 | channels]) + bytes(3) + struct.pack(">I", 0) + bytes(12) \
+    spec = struct.pack(">III", 0, rate, 0) + bytes([ch_reserved << 4 | channels]) + bytes(3) + struct.pack(">I", ch_asn) + bytes(12) \
         + struct.pack(">II", 0, 0) + bytes(16) + bytes(40)
     assert len(general) == 32 and len(spec) == 96
     fields = [("title", 128), ("composer", 128), ("songWriter", 128), ("artist", 128), ("album", 128),
@@ -145,13 +148,17 @@ def generate(directory):
     rng = random.Random(20261110)
     expect = {}
 
-    def save(name, data, planar, rate, tags, gettaginfo):
+    def save(name, data, planar, rate, tags, gettaginfo, speaker=None):
+        # planar は本体に渡す順 (配置のビットの小さい順) に並べたもの。speaker は dwSpeakerConfig。
+        # 省略したら、make_dsf / make_dff の 2ch (FL FR) は 0x3、ほか (1ch、WSD の Ch_Asn = 0) は 0
+        if speaker is None:
+            speaker = 0x3 if len(planar) == 2 and name.endswith((".dsf", ".dff")) else 0
         with open(os.path.join(directory, name), "wb") as f:
             f.write(data)
         with open(os.path.join(directory, name + ".planar"), "wb") as f:
             for p in planar:
                 f.write(p)
-        expect[name] = {"rate": rate, "channels": len(planar), "bytes": len(planar[0]),
+        expect[name] = {"rate": rate, "channels": len(planar), "speaker": speaker, "bytes": len(planar[0]),
                         "tags": tags, "gettaginfo": gettaginfo}
 
     common_tags = lambda rate: {"Bitrate": f"{rate // 1000000}.{rate // 1000 % 1000:03d}Mbps",
@@ -170,11 +177,11 @@ def generate(directory):
     save("msb_mono_dsd128.dsf", make_dsf(planar, DSD64 * 2, nbytes * 8, lsb_first=False), planar, DSD64 * 2,
          common_tags(DSD64 * 2), {"type": 0})
 
-    # DSF: 5.1ch。チャンネル数はそのまま報告する
+    # DSF: 5.1ch (channel type 7)。FL FR FC LFE BL BR で、並びは WAV と同じ
     nbytes = 4096 + 17
     planar = random_planar(rng, 6, nbytes)
     save("six_channels.dsf", make_dsf(planar, DSD64, nbytes * 8), planar, DSD64,
-         common_tags(DSD64), {"type": 0})
+         common_tags(DSD64), {"type": 0}, speaker=0x3F)
 
     # DSDIFF: UTF-8 のタイトル・アーティスト・コメント。チャンネルあたりのバイト数が奇数
     nbytes = 20001
@@ -296,6 +303,49 @@ def generate(directory):
     # WSD: Version 1.0 (10h)。1.x は同じ形
     save("version10.wsd", make_wsd(planar, DSD64, {}, version=0x10), planar, DSD64, common_tags(DSD64), {"type": 0})
 
+    # DSF: 4 channels (channel type 5) は FL FR FC LFE。4ch の標準の配置 (FL FR BL BR) と違う
+    nbytes = 3000
+    planar = random_planar(rng, 4, nbytes)
+    save("four_channels_lfe.dsf", make_dsf(planar, DSD64, nbytes * 8, channel_type=5), planar, DSD64,
+         common_tags(DSD64), {"type": 0}, speaker=0xF)
+
+    # DSF: channel type (stereo) とチャンネル数 (6) が合わない。配置は 0 (標準の配置)、並びはファイルのまま
+    planar = random_planar(rng, 6, nbytes)
+    save("type_mismatch.dsf", make_dsf(planar, DSD64, nbytes * 8, channel_type=2), planar, DSD64,
+         common_tags(DSD64), {"type": 0}, speaker=0)
+
+    # DSDIFF: 5.1ch のチャンネル ID が C SLFT SRGT LS RS LFE の順。FL FR FC LFE BL BR に並べ替える
+    planar = random_planar(rng, 6, 2001)
+    ids = [b"C   ", b"SLFT", b"SRGT", b"LS  ", b"RS  ", b"LFE "]
+    save("reordered_51.dff", make_dff(planar, DSD64, ids=ids), [planar[i] for i in (1, 2, 0, 5, 3, 4)], DSD64,
+         common_tags(DSD64), {"type": 0}, speaker=0x3F)
+
+    # DSDIFF: 仕様どおりの 5ch (MLFT MRGT C LS RS)。並べ替えない
+    planar = random_planar(rng, 5, 2001)
+    ids = [b"MLFT", b"MRGT", b"C   ", b"LS  ", b"RS  "]
+    save("five_channels.dff", make_dff(planar, DSD64, ids=ids), planar, DSD64, common_tags(DSD64), {"type": 0},
+         speaker=0x37)
+
+    # DSDIFF: 配置の決まらないチャンネル ID (C001〜)。配置は 0、並びはファイルのまま
+    planar = random_planar(rng, 3, 2001)
+    save("context_ids.dff", make_dff(planar, DSD64, ids=[b"C001", b"C002", b"C003"]), planar, DSD64,
+         common_tags(DSD64), {"type": 0}, speaker=0)
+
+    # WSD: 5.1ch (Ch_Asn 55h 00h 00h 44h)。ストリームは Lf Cf Rf LFE Lr Rr の順なので、FL FR FC LFE BL BR に並べ替える
+    planar = random_planar(rng, 6, 2001)
+    save("surround_51.wsd", make_wsd(planar, DSD64, {}, ch_asn=0x55000044), [planar[i] for i in (0, 2, 1, 3, 4, 5)],
+         DSD64, common_tags(DSD64), {"type": 0}, speaker=0x3F)
+
+    # WSD: 4ch (Lf Rf Lr Rr、Version 1.0 の配置)
+    planar = random_planar(rng, 4, 2001)
+    save("quad.wsd", make_wsd(planar, DSD64, {}, ch_asn=0x44000044), planar, DSD64, common_tags(DSD64), {"type": 0},
+         speaker=0x33)
+
+    # WSD: WAV に当たる位置のない Lr-middle を含む 3ch。配置は 0、並びはファイルのまま
+    planar = random_planar(rng, 3, 2001)
+    save("rear_middle.wsd", make_wsd(planar, DSD64, {}, ch_asn=0x44000020), planar, DSD64, common_tags(DSD64),
+         {"type": 0}, speaker=0)
+
     # 開けてはいけないもの: DST 圧縮、対応しない周波数、WSD のデータとテキストが重なる
     planar = random_planar(rng, 2, 1000)
     with open(os.path.join(directory, "dst.dff"), "wb") as f:
@@ -310,7 +360,11 @@ def generate(directory):
     # WSD の Version 2.0 (20h)
     with open(os.path.join(directory, "version2.wsd"), "wb") as f:
         f.write(make_wsd(planar, DSD64, {}, version=0x20))
-    expect["_invalid"] = ["dst.dff", "bad_rate.dsf", "text_overlaps_data.wsd", "version2.dff", "version2.wsd"]
+    # 9ch (本体が受け付けるのは 8ch まで)
+    with open(os.path.join(directory, "nine_channels.wsd"), "wb") as f:
+        f.write(make_wsd(random_planar(rng, 9, 100), DSD64, {}))
+    expect["_invalid"] = ["dst.dff", "bad_rate.dsf", "text_overlaps_data.wsd", "version2.dff", "version2.wsd",
+                          "nine_channels.wsd"]
 
     with open(os.path.join(directory, "expect.json"), "w", encoding="utf-8") as f:
         json.dump(expect, f, ensure_ascii=False, indent=1)
@@ -388,6 +442,7 @@ def check_dop(args):
         for bits, word in (("24", 3), ("-64", 4), ("0", 3)):
             info = cli.info("kpidop.kpi", path, "-b", bits)
             want = {"format": "1", "rate": str(e["rate"] // 16), "channels": str(e["channels"]),
+                    "speaker": f"0x{e['speaker']:x}",
                     "bits": str(word * 8), "length": str(frames * 10000000 // (e["rate"] // 16)),
                     "loop": "0", "seekable": "7", "unit": "0"}
             for key, value in want.items():

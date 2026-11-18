@@ -32,6 +32,7 @@ public:
 	// 次の Read を、チャンネルあたり pos バイト目から始める
 	void Seek(uint64_t pos);
 	// チャンネルあたり最大 bytes バイト読み、ch チャンネル目を dst[ch * stride + i] に入れる。
+	// チャンネルは本体に渡す順 (Layout().channelOrder で並べ替えた、スピーカーの配置のビットの小さい順)。
 	// 読めたバイト数を返す (曲の終わりやファイルの途中切れでは bytes より少ない)
 	size_t Read(uint8_t* dst, size_t stride, size_t bytes);
 
