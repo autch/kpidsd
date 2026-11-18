@@ -6,6 +6,7 @@ kpidop/kpidop.txt -text
 kpid2p/kpid2p.txt -text
 # SDK のヘッダは原本のまま (UTF-8 BOM 付き / CRLF) 置く
 kpisdk/*.h -text
+kpisdk/*.md -text
 
 # Visual Studio のファイルは CRLF
 *.sln text eol=crlf

@@ -90,7 +90,8 @@ class KbKpiFileImpl : public KbKpiUnknownImpl<IKpiFile>
  //アーカイブプラグインでも実装が必要
 public:
     //IKpiFile 派生
-    DWORD WINAPI GetFileName(wchar_t *pszName, DWORD dwSize){pszName[0] = 0;return 0;}
+    //dwSize が sizeof(wchar_t) 未満なら書き込まない
+    DWORD WINAPI GetFileName(wchar_t *pszName, DWORD dwSize){if(dwSize >= sizeof(wchar_t)){pszName[0] = 0;}return 0;}
     BOOL  WINAPI GetRealFileW(const wchar_t **ppszFileName){*ppszFileName=NULL;return FALSE;}
     BOOL  WINAPI GetRealFileA(const char    **ppszFileName){*ppszFileName=NULL;return FALSE;}
     BOOL  WINAPI GetBuffer(const BYTE **ppBuffer, size_t *pstSize){*ppBuffer=NULL;*pstSize=0;return FALSE;}
@@ -123,8 +124,9 @@ class KbKpiNullFolder : public KbKpiFolderImpl
  //本体(またはプラグインを使用するソフト)で必要(かも)
 public:
     //IKpiFolder 派生
-    DWORD WINAPI GetFolderName(wchar_t *pszName, DWORD dwSize){pszName[0] = 0;return 0;}
-    DWORD WINAPI EnumFiles(DWORD dwIndex, wchar_t *pszName, DWORD dwSize, DWORD dwLevel){pszName[0] = 0; return 0;}
+    //dwSize が sizeof(wchar_t) 未満なら書き込まない
+    DWORD WINAPI GetFolderName(wchar_t *pszName, DWORD dwSize){if(dwSize >= sizeof(wchar_t)){pszName[0] = 0;}return 0;}
+    DWORD WINAPI EnumFiles(DWORD dwIndex, wchar_t *pszName, DWORD dwSize, DWORD dwLevel){if(dwSize >= sizeof(wchar_t)){pszName[0] = 0;} return 0;}
     BOOL  WINAPI OpenFile(const wchar_t* cszName, IKpiFile **ppFile){*ppFile=NULL;return FALSE;}
     BOOL  WINAPI OpenFolder(const wchar_t* cszName, IKpiFolder **ppFolder){*ppFolder=NULL;return FALSE;}
 };

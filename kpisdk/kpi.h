@@ -5,8 +5,12 @@
 #pragma pack(push, 1) //構造体のアラインメント
 /*
 
-  KbMedia Player プラグイン SDK (2026/10/31版)(本体Ver 3.17beta3 用)
-  (v3.17beta2 以前の本体でも実用上はほとんど問題なし)
+  KbMedia Player プラグイン SDK (2026/11/18版)(本体Ver 3.17beta6 用)
+  (マルチチャンネル対応を除けば v3.17beta5 以前の本体でも実用上はほとんど問題なし)
+
+  AI(Claude 等)がプラグインを作成・修正する場合は、ヘッダと合わせて
+  kpisdk_for_ai.md を必ず読むこと。ヘッダに書いていない前提や本体の動きの
+  細部をまとめてある。
 
   ・kmp_pi.h: 旧仕様のプラグインを作成・使用時に必要
               IKpiTagInfo の定義済み cszName を使いたい場合も必要
@@ -31,6 +35,8 @@
     ・kpi_unarc.cpp:   アーカイブプラグイン関係のヘルパー関数使用時
     ・kpi_device.cpp:  デバイスプラグイン関係のヘルパー関数使用時
     ・kpi_converter.cpp: 変換プラグイン関係のヘルパー関数使用時
+  ・kpisdk_for_ai.md: AI 向けの補足(ヘッダに書いていない前提・本体の動きの
+                      細部・注意点)。人が読む必要はない(読んでも構わない)
 
   とりあえず新しい仕様のプラグインを作ってみる場合は、
 
@@ -46,6 +52,30 @@
 
   更新履歴
 
+  2026/11/18:(v3.17beta6)
+    ・マルチチャンネル(3ch 以上、7.1ch まで)に対応
+      ・KPI_MEDIAINFO::dwChannels を 1〜8 に変更
+        (3ch 以上に対応していない v3.17beta5 以前の本体は、3ch 以上の曲の再生に失敗する)
+      ・KPI_MEDIAINFO::dwSpeakerConfig の仕様を追加(WAVEFORMATEXTENSIBLE::dwChannelMask と同じ値。
+        0 はチャネル数で決まる標準の配置。データはビットの小さい順に並べる)
+      ・KPI_DEVICE_MODULEINFO::SUPPORT_FLAG_MULTICHANNEL を追加
+        (このフラグを立てたデバイスにだけ、本体は 3ch 以上で Open を呼ぶ。
+         立てていないデバイスには、本体がステレオにまとめて 2ch で渡す)
+      ・KPI_DEVICE_FORMAT::dwSpeakerConfig の仕様を追加(KPI_MEDIAINFO::dwSpeakerConfig と同じ)
+    ・IKpiOutDevice::Output に float・double で渡す値に NaN・±∞ を含まないことを本体が保証するようにした
+      (デバイスプラグインは NaN・±∞ を確かめなくてよい。kpi_device.h)
+      ・値の範囲は今までどおり -1.0〜1.0 に収めない(1.0 を超えることがある。収めるべきかはデバイスによって
+        変わるため。自分で整数に直すデバイスプラグインは範囲を確かめること)
+  2026/11/13:(v3.17beta5)
+    ・IKpiFolder::OpenFile/OpenFolder で UNC パスが渡されたとき、本体は LAN 外のデータを
+      無視してオープンに失敗するようにした。(将来の版では設定可能にするかもしれない)
+    ・IKpiConfig::SetBin で保存出来るデータサイズの上限(1MB)を追加
+    ・IKpiConfig::SetStr で保存出来る文字列のサイズの上限(16KB)を追加
+    ・IKpiDecoder::Select/IKpiPlayer::Select に、Open が返した曲数より大きい曲番号が
+      渡されないことを明記(本体が保証する。プラグインは曲番号の範囲を確かめなくて良い)
+      v3.17beta4 以前の本体はタグ取得時に曲数より大きい曲番号を渡すことがあるため、
+      それらの本体でも使う場合は、プラグイン側で範囲を確かめないと落ちることがある
+    ・AI 向けの補足 kpisdk_for_ai.md を追加
   2026/10/31:(v3.17beta3)
     ・文字コードを UTF-8(BOM付) に変更
     ・IKpiConfig のセクション名とキー名の名前付け規則を追加
@@ -643,6 +673,7 @@ public:
       例5 ：OpenFile("a.lzh>b/c.txt", &pFile);//アーカイブ(相対パス)        #現在未実装
       例6 ：OpenFile("C:\\a.lzh>b.zip>c.txt", &pFile);//アーカイブ(絶対パス)#現在未実装
       例7 ：OpenFile("http://www.hoge.com/a.zip>b.txt", &pFile);//http://     #現在未実装
+      例8 ：OpenFile("//server/share/a.mp3", &pFile);//UNC パス
 
       例5,6 はパフォーマンスの関係上実装される見込みは少ない。
       どうしてもアーカイブの中のファイルを取得したければ、
@@ -664,6 +695,11 @@ public:
       また、アーカイブプラグインの動作の仕様上、親フォルダを指定してなくてもうまく
       復元されないことがある。
 
+      例8: の UNC パスは現在の本体の実装では LAN 外のデータのオープンには失敗する(OpenFolder も同様)
+      プラグインを使うホストを実装する際にどうするかは実装者の判断に委ねる
+      プラグインを実装する際に UNC パスを扱う場合はホストの方針に従うなら OpenFile/OpenFolder
+      で開くのも一つの方法(プラグインの設定から参照ファイルを取得してそれを開く場合など)
+
     BOOL WINAPI OpenFolder(const wchar_t* cszName, IKpiFolder **ppFolder);
       EnumFiles で返す名前に対応するフォルダを取得する。
       取得した *ppFolder は、必要がなくなったら Release すること。
@@ -682,6 +718,8 @@ public:
       例6 ：OpenFolder("a.lzh>b/", &pFolder);       //アーカイブ内フォルダ(相対パス)
       例7 ：OpenFolder("C:/a.lzh>b.zip>", &pFolder);//アーカイブ内アーカイブ(絶対パス)
       例8 ：OpenFolder("http://www.hoge.com/", &pFolder);//http    #現在未実装
+      例9 ：OpenFolder("//server/share/", &pFolder);//UNC パス
+
 */
 };
 ///////////////////////////////////////////////////////////////////////////////
@@ -1291,6 +1329,10 @@ public:
       してゼロクリアされたデータが返るが、偶然デコードに成功してしまうことも
       理論的にはあり得る。
 
+    SetStr:
+      cszValue のサイズの上限は 16KB(16*1024 バイト。終端の 0 を含む)。
+      文字数では 8191 文字まで。上限を超える場合は何もしない。(保存されない)
+
     GetStr:
       dwSize は pszValue のバッファサイズ(文字数単位ではない)
       文字列の格納に必要なバッファのサイズを返す。
@@ -1300,6 +1342,7 @@ public:
 
     SetBin:
       dwSize は格納すべきバイナリデータ(pBuffer)のバッファサイズ
+      dwSize の上限は 1MB(1024*1024 バイト)。上限を超える場合は何もしない。(保存されない)
       格納すべきバイナリデータの設定画面はプラグイン側で作成する必要がある。
 
     GetBin:
@@ -1479,7 +1522,7 @@ public:
       渡しても良いし、OpenFile/OpenFolder して得たものを渡しても良い。
       プラグインが独自に実装した pFile/pFolder を渡しても良い。
 
-      現在未実装
+      kbrunkpi.exe 経由のときは未実装
       kbrunkpi.exe 経由での実装が複雑すぎて無理かも…
 */
 };

@@ -9,6 +9,9 @@
 /*デコーダプラグイン
   オーディオデータを PCM にデコード
 
+  AI(Claude 等)がプラグインを作成・修正する場合は、kpi.h と合わせて
+  kpisdk_for_ai.md を必ず読むこと。
+
   旧仕様(kmp_pi.h)で出来なかったループに関する細かな制御、1ファイル複数曲に
   きちんと対応。
 
@@ -172,8 +175,14 @@ struct KPI_MEDIAINFO
     DWORD  dwSampleRate;   //再生周波数(44100, 48000 etc...)
     INT32  nBitsPerSample; //量子化ビット数(8bit, 16bit, 24bit, 32bit, -32bit, -64bit)
                            //float の場合、値を負にする(32bit float => -32, 64bit float => -64)
-    DWORD  dwChannels;     //チャネル数(1 or 2)
-    DWORD  dwSpeakerConfig;//0(マルチチャンネル対応のために予約)
+    DWORD  dwChannels;     //チャネル数(1〜8)
+                           //3ch 以上に対応していない古い本体は、3ch 以上の曲を再生できない(開くのに失敗する)
+    DWORD  dwSpeakerConfig;//スピーカー配置(WAVEFORMATEXTENSIBLE::dwChannelMask と同じ値。SPEAKER_FRONT_LEFT など)
+                           //0 はチャネル数で決まる標準の配置
+                           //  1ch: FC, 2ch: FL FR, 3ch: FL FR FC, 4ch: FL FR BL BR, 5ch: FL FR FC BL BR,
+                           //  6ch: FL FR FC LFE BL BR, 7ch: FL FR FC LFE BC SL SR, 8ch: FL FR FC LFE BL BR SL SR
+                           //データはビットの小さい順に並べる(形式によって並びが違う場合はプラグインが並べ替える)
+                           //立っているビットの数が dwChannels と合わない値は、本体が 0 として扱う
     UINT64 qwLength;       //１ループ目(イントロ＋ループ１回)の曲の長さ(単位は100ナノ秒)
     UINT64 qwLoop;         //２ループ目以降の１ループの長さ(単位は100ナノ秒)
     UINT64 qwFadeOut;      //フェードアウト時間(単位は100ナノ秒)(フェードアウトしない場合は 0, 本体の設定に従う場合は-1)
@@ -290,6 +299,9 @@ public:
                         DWORD dwTagGetFlags)=0;//どのフィールドのタグを取得するかのフラグ
       選曲する(dwNumber=曲番号 は 1 ベース、曲番号0 は存在しない)
       KbMedia Player は Render/Seek の前に必ず Select を呼び出す。
+
+      dwNumber に IKpiDecoderModule::Open が返した曲数より大きい値が渡されることはない。
+      (渡した結果は未定義。プラグインは曲番号の範囲を確かめなくて良い)
 
       1ファイル1曲の場合は dwNumber は常に 1 が渡される。
       1ファイル複数曲の場合は dwNumber に 0 が渡されることがある。この場合は
