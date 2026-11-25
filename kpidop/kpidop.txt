@@ -5,11 +5,7 @@ DSD (Direct Stream Digital) 音源を DSD Audio over PCM Frames (DoP) 方式
 で再生するための KbMedia Player プラグインです。対応する拡張子は dsf,
 dff, wsd です。
 
-KbMedia Player 2.80beta29 以降のプラグイン仕様に対応しています。
-
-KbMedia Player のプラグイン仕様は PCM を前提として作られているため、DSD
-を再生する上で制限事項がありますので、このファイルは最後まで目を通してく
-ださい。
+KbMedia Player 3.17beta6 以降のプラグイン仕様に対応しています。
 
 
 対応 DSD DAC
@@ -31,7 +27,11 @@ DoP は本体がステレオにまとめられないので、出力デバイス�
 していなければ再生できません (「マルチチャンネル」を参照)。3ch 以上の DSD
 は作者も試せる機器を持っていないので、確認していません。
 
-Roland UA-M10 と FOSTEX HP-A4 (thanks KOH) で確認しています。
+以下の DAC で動作確認しています。
+
+- Roland UA-M10 (DoP via ASIO/WASAPI)
+- KORG DS-DAC-100m (native DSD via ASIO)
+- Sony Walkman NW-A307 USB-DAC mode (native DSD via ASIO)
 
 
 KbMedia Player の構成
@@ -60,6 +60,9 @@ ASIO で DSD ネイティブ再生に対応したデバイスでは、本体付�
 
 ・デバイスインタフェース：ASIO か WASAPI を選択。両方使えるデバイスもあ
 るし、どちらかでないと使えないデバイスもあるらしい。
+
+・DSD再生形式（kbasio.kpi）：DoP か DSD Native から、デバイスがサポート
+するほうを選択します。WASAPI では DoP しか使えません。
 
 ・デバイスへの出力ビット数：32bit INT か 24bit INT をチェック、デバイス
 によって動作する組み合わせは変わるようですので、試行錯誤する必要があるか
@@ -106,7 +109,7 @@ DSDIFF フォーマットにおける DST (Direct Stream Transfer) コーデッ�
 以下の方法で入手したファイルフォーマットで動作確認しています。
 
 - KORG AudioGate v3.0.2, v4.0.2 で生成した DSF/DSDIFF/WSD ファイル
-- http://www.2l.no/hires/ でダウンロードできる DSDIFF, DSF ファイル
+- https://www.2l.no/hires/ でダウンロードできる DSDIFF, DSF ファイル
 - e-onkyo music で購入した DSF ファイル
 - 1bit オーディオコンソーシアム公式サイトの WSD ファイル
 
@@ -114,9 +117,8 @@ DSDIFF フォーマットにおける DST (Direct Stream Transfer) コーデッ�
 マルチチャンネル
 ----------------
 
-3ch 以上 (7.1ch まで) のファイルは、KbMedia Player 3.17beta6 以降で再生
-できます。それより前の本体では再生できません。9ch 以上のファイルは開き
-ません。
+3ch 以上 (7.1ch まで) のファイルを再生できます。9ch 以上のファイルは開
+きません。
 
 チャンネルの配置は、ファイルの情報から本体に伝えます。
 
@@ -149,9 +151,6 @@ Windows 10 以降。Visual Studio 2026 の VC++ ランタイム (VC++ 再頒布�
 
 シークはサンプル単位で正確に行います。
 
-DSD DAC の機種によってはシーク時にプチノイズが乗ることがあります。
-KbMedia Player はシーク中にデータが途切れる（PCM としては正しいが、DoP
-としては無音データを流すべき）ため、これを回避する手段はありません。
 DoP のマーカーはシークをまたいでも 0x05 と 0xfa が交互に続くようにして
 います。
 
@@ -246,5 +245,5 @@ v2.1.0 (131328)
 ----
 Autch
 autch@autch.net
-http://github.com/autch
-http://www.autch.net/
+https://github.com/autch
+https://www.autch.net/

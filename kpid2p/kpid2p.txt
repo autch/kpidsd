@@ -4,7 +4,7 @@
 DSD (Direct Stream Digital) 音源を PCM に変換して再生するための KbMedia
 Player プラグインです。対応する拡張子は dsf, dff, wsd です。
 
-KbMedia Player 2.80beta29 以降のプラグイン仕様に対応しています。
+KbMedia Player 3.17beta6 以降のプラグイン仕様に対応しています。
 
 このプラグインは DSD ファイルフォーマットの実装を kpidop.kpi と共有して
 います。このため、ファイルフォーマットやタグ形式サポートの状況は
@@ -72,7 +72,7 @@ DSDIFF フォーマットにおける DST (Direct Stream Transfer) コーデッ�
 以下の方法で入手したファイルフォーマットで動作確認しています。
 
 - KORG AudioGate v3.0.2, v4.0.2 で生成した DSF/DSDIFF/WSD ファイル
-- http://www.2l.no/hires/ でダウンロードできる DSDIFF, DSF ファイル
+- https://www.2l.no/hires/ でダウンロードできる DSDIFF, DSF ファイル
 - e-onkyo music で購入した DSF ファイル
 - 1bit オーディオコンソーシアム公式サイトの WSD ファイル
 
@@ -80,9 +80,8 @@ DSDIFF フォーマットにおける DST (Direct Stream Transfer) コーデッ�
 マルチチャンネル
 ----------------
 
-3ch 以上 (7.1ch まで) のファイルは、KbMedia Player 3.17beta6 以降で再生
-できます。それより前の本体では再生できません。9ch 以上のファイルは開き
-ません。
+3ch 以上 (7.1ch まで) のファイルを再生できます。9ch 以上のファイルは開
+きません。
 
 チャンネルの配置は、ファイルの情報から本体に伝えます。
 
@@ -197,5 +196,5 @@ v2.0.0 (131072)
 ----
 Autch
 autch@autch.net
-http://github.com/autch
-http://www.autch.net/
+https://github.com/autch
+https://www.autch.net/
